@@ -1,0 +1,14 @@
+{
+  "id": "{BC752980-2D17-67B6-9B91-0B4113EECD83}",
+  "name": "Alarmprotokoll",
+  "type": 3,
+  "vendor": "NTUB",
+  "aliases": [
+    "Alarmprotokoll"
+  ],
+  "url": "https://github.com/ubittner/Alarmprotokoll/",
+  "parentRequirements": [],
+  "childRequirements": [],
+  "implemented": [],
+  "prefix": "APRO"
+}
