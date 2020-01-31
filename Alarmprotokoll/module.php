@@ -156,7 +156,7 @@ class Alarmprotokoll extends IPSModule
     private function RegisterTimers(): void
     {
         $this->RegisterTimer('ResetAlarmMessages', 0, 'APRO_ResetAlarmMessages(' . $this->InstanceID . ');');
-        $this->RegisterTimer('SendMonthlyProtocol', 0, 'APRO_SendMonthlyProtocol(' . $this->InstanceID . '(, true, 1);');
+        $this->RegisterTimer('SendMonthlyProtocol', 0, 'APRO_SendMonthlyProtocol(' . $this->InstanceID . ', true, 1);');
         $this->RegisterTimer('CleanUpArchiveData', 0, 'APRO_CleanUpArchiveData(' . $this->InstanceID . ');');
     }
 
