@@ -52,7 +52,7 @@
       "items": [
         {
           "type": "Label",
-          "caption": "Bitte geben Sie eine eindeutige Bezeichnung für dieses Alarmprotokoll an (z.B. Name des überwachten Objekts):"
+          "caption": "Bitte geben Sie eine eindeutige Bezeichnung für dieses Alarmprotokoll an (z.B. Standortbezeichnung):"
         },
         {
           "type": "ValidationTextBox",
