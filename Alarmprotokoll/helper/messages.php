@@ -1,6 +1,8 @@
 <?php
 
-// Declare
+/** @noinspection DuplicatedCode */
+/** @noinspection PhpUnused */
+
 declare(strict_types=1);
 
 trait APRO_messages
@@ -16,6 +18,9 @@ trait APRO_messages
      */
     public function UpdateMessages(string $Message, int $Type): void
     {
+        if ($this->CheckMaintenanceMode()) {
+            return;
+        }
         // Write to archive variable first
         $archiveRetentionTime = $this->ReadPropertyInteger('ArchiveRetentionTime');
         if ($archiveRetentionTime > 0) {
@@ -123,7 +128,7 @@ trait APRO_messages
         }
     }
 
-    //#################### Private
+    #################### Private
 
     /**
      * Updates the event messages.
@@ -132,6 +137,9 @@ trait APRO_messages
      */
     private function UpdateEventMessages(string $Message): void
     {
+        if ($this->CheckMaintenanceMode()) {
+            return;
+        }
         $retentionTime = $this->ReadPropertyInteger('EventMessagesRetentionTime');
         if ($retentionTime > 0) {
             // Get messages
@@ -173,6 +181,9 @@ trait APRO_messages
      */
     private function UpdateStateMessages(string $Message): void
     {
+        if ($this->CheckMaintenanceMode()) {
+            return;
+        }
         // Check amount of messages to display
         $amountStateMessages = $this->ReadPropertyInteger('AmountStateMessages');
         if ($amountStateMessages > 0) {
@@ -204,6 +215,9 @@ trait APRO_messages
      */
     private function UpdateAlarmMessages(string $Message): void
     {
+        if ($this->CheckMaintenanceMode()) {
+            return;
+        }
         $retentionTime = $this->ReadPropertyInteger('AlarmMessagesRetentionTime');
         if ($retentionTime > 0) {
             // Get messages

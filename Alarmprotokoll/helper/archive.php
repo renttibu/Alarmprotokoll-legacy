@@ -1,6 +1,7 @@
 <?php
 
-// Declare
+/** @noinspection PhpUnused */
+
 declare(strict_types=1);
 
 trait APRO_archive
@@ -29,9 +30,9 @@ trait APRO_archive
                     break;
 
             }
-            echo $text;
+            $this->SendDebug(__FUNCTION__, $text, 0);
         } else {
-            echo 'Es ist kein Archiv ausgewählt!';
+            $this->SendDebug(__FUNCTION__, 'Es ist kein Archiv ausgewählt!', 0);
         }
     }
 
@@ -88,7 +89,7 @@ trait APRO_archive
         }
     }
 
-    //################### Private
+    ################### Private
 
     /**
      * Sets the timer for deleting archive data.

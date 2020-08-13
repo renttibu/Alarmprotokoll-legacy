@@ -1,5 +1,8 @@
 <?php
 
+/** @noinspection DuplicatedCode */
+/** @noinspection PhpUnused */
+
 /*
  * @module      Alarmprotokoll
  *
@@ -12,11 +15,7 @@
  * @license    	CC BY-NC-SA 4.0
  *              https://creativecommons.org/licenses/by-nc-sa/4.0/
  *
- * @version     4.00-1
- * @date        2020-01-29, 18:00, 1580317200
- * @review      2020-01-29, 18:00
- *
- * @see         https://github.com/ubittner/Alarmprotokoll/
+ * @see         https://github.com/ubittner/Alarmprotokoll
  *
  * @guids       Library
  *              {C241A156-76A1-0079-DDE2-16F73D96D90A}
@@ -25,7 +24,6 @@
  *             	{BC752980-2D17-67B6-9B91-0B4113EECD83}
  */
 
-// Declare
 declare(strict_types=1);
 
 // Include
@@ -35,10 +33,13 @@ class Alarmprotokoll extends IPSModule
 {
     // Helper
     use APRO_archive;
+    use APRO_backupRestore;
     use APRO_messages;
     use APRO_protocol;
 
     // Constants
+    private const ALARMPROTOKOLL_LIBRARY_GUID = '{C241A156-76A1-0079-DDE2-16F73D96D90A}';
+    private const ALARMPROTOKOLL_MODULE_GUID = '{BC752980-2D17-67B6-9B91-0B4113EECD83}';
     private const ARCHIVE_MODULE_GUID = '{43192F0B-135B-4CE7-A0A7-1475603F3060}';
     private const SMTP_MODULE_GUID = '{375EAF21-35EF-4BC4-83B3-C780FD8BD88A}';
 
@@ -46,57 +47,9 @@ class Alarmprotokoll extends IPSModule
     {
         // Never delete this line!
         parent::Create();
-
-        // Register properties
         $this->RegisterProperties();
-
-        // Register variables
         $this->RegisterVariables();
-
-        // Register timers
         $this->RegisterTimers();
-    }
-
-    public function ApplyChanges()
-    {
-        // Wait until IP-Symcon is started
-        $this->RegisterMessage(0, IPS_KERNELSTARTED);
-
-        // Never delete this line!
-        parent::ApplyChanges();
-
-        // Check runlevel
-        if (IPS_GetKernelRunlevel() != KR_READY) {
-            return;
-        }
-
-        // Rename messages
-        $this->RenameMessages();
-
-        // Set timers
-        $this->SetTimerResetAlarmMessages();
-        $this->SetTimerSendMonthlyProtocol();
-        $this->SetTimerCleanUpArchiveData();
-
-        // Validate configuration
-        $this->ValidateConfiguration();
-    }
-
-    public function MessageSink($TimeStamp, $SenderID, $Message, $Data)
-    {
-        // Send debug
-        $this->SendDebug('MessageSink', 'Message from SenderID ' . $SenderID . ' with Message ' . $Message . "\r\n Data: " . print_r($Data, true), 0);
-        switch ($Message) {
-            case IPS_KERNELSTARTED:
-                $this->KernelReady();
-                break;
-
-        }
-    }
-
-    protected function KernelReady()
-    {
-        $this->ApplyChanges();
     }
 
     public function Destroy()
@@ -105,17 +58,86 @@ class Alarmprotokoll extends IPSModule
         parent::Destroy();
     }
 
-    //#################### Private
+    public function ApplyChanges()
+    {
+        // Wait until IP-Symcon is started
+        $this->RegisterMessage(0, IPS_KERNELSTARTED);
+        // Never delete this line!
+        parent::ApplyChanges();
+        // Check runlevel
+        if (IPS_GetKernelRunlevel() != KR_READY) {
+            return;
+        }
+        $this->SetArchiveLogging($this->ReadPropertyBoolean('UseArchiving'));
+        $this->RenameMessages();
+        $this->SetTimerResetAlarmMessages();
+        $this->SetTimerSendMonthlyProtocol();
+        $this->SetTimerCleanUpArchiveData();
+        if ($this->CheckMaintenanceMode()) {
+            return;
+        }
+        $this->ValidateConfiguration();
+    }
+
+    public function MessageSink($TimeStamp, $SenderID, $Message, $Data)
+    {
+        $this->SendDebug(__FUNCTION__, $TimeStamp . ', SenderID: ' . $SenderID . ', Message: ' . $Message . ', Data: ' . print_r($Data, true), 0);
+        if (!empty($Data)) {
+            foreach ($Data as $key => $value) {
+                $this->SendDebug(__FUNCTION__, 'Data[' . $key . '] = ' . json_encode($value), 0);
+            }
+        }
+        switch ($Message) {
+            case IPS_KERNELSTARTED:
+                $this->KernelReady();
+                break;
+
+        }
+    }
+
+    public function GetConfigurationForm()
+    {
+        $formData = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
+        $moduleInfo = [];
+        $library = IPS_GetLibrary(self::ALARMPROTOKOLL_LIBRARY_GUID);
+        $module = IPS_GetModule(self::ALARMPROTOKOLL_MODULE_GUID);
+        $moduleInfo['name'] = $module['ModuleName'];
+        $moduleInfo['version'] = $library['Version'] . '-' . $library['Build'];
+        $moduleInfo['date'] = date('d.m.Y', $library['Date']);
+        $moduleInfo['time'] = date('H:i', $library['Date']);
+        $moduleInfo['developer'] = $library['Author'];
+        $formData['elements'][0]['items'][2]['caption'] = "Instanz ID:\t\t" . $this->InstanceID;
+        $formData['elements'][0]['items'][3]['caption'] = "Modul:\t\t\t" . $moduleInfo['name'];
+        $formData['elements'][0]['items'][4]['caption'] = "Version:\t\t\t" . $moduleInfo['version'];
+        $formData['elements'][0]['items'][5]['caption'] = "Datum:\t\t\t" . $moduleInfo['date'];
+        $formData['elements'][0]['items'][6]['caption'] = "Uhrzeit:\t\t\t" . $moduleInfo['time'];
+        $formData['elements'][0]['items'][7]['caption'] = "Entwickler:\t\t" . $moduleInfo['developer'];
+        $formData['elements'][0]['items'][8]['caption'] = "Präfix:\t\t\tAPRO";
+        return json_encode($formData);
+    }
+
+    public function ReloadConfiguration()
+    {
+        $this->ReloadForm();
+    }
+
+    #################### Private
+
+    private function KernelReady()
+    {
+        $this->ApplyChanges();
+    }
 
     private function RegisterProperties(): void
     {
+        $this->RegisterPropertyString('Note', '');
+        $this->RegisterPropertyBoolean('MaintenanceMode', false);
         // Designation
         $this->RegisterPropertyString('Designation', '');
-
         // Archive
         $this->RegisterPropertyInteger('Archive', 0);
+        $this->RegisterPropertyBoolean('UseArchiving', false);
         $this->RegisterPropertyInteger('ArchiveRetentionTime', 90);
-
         // Messages
         $this->RegisterPropertyBoolean('EnableAlarmMessages', true);
         $this->RegisterPropertyBoolean('EnableStateMessages', true);
@@ -123,7 +145,6 @@ class Alarmprotokoll extends IPSModule
         $this->RegisterPropertyInteger('AlarmMessagesRetentionTime', 2);
         $this->RegisterPropertyInteger('AmountStateMessages', 8);
         $this->RegisterPropertyInteger('EventMessagesRetentionTime', 7);
-
         // E-Mail dispatch
         $this->RegisterPropertyString('MonthlyProtocolSubject', 'Monatsprotokoll');
         $this->RegisterPropertyString('ArchiveProtocolSubject', 'Archivprotokoll');
@@ -133,22 +154,19 @@ class Alarmprotokoll extends IPSModule
     private function RegisterVariables(): void
     {
         // Alarm messages
-        $this->RegisterVariableString('AlarmMessages', 'Alarmmeldung', '~TextBox', 1);
+        $this->RegisterVariableString('AlarmMessages', 'Alarmmeldung', '~TextBox', 10);
         $alarmMessages = $this->GetIDForIdent('AlarmMessages');
         IPS_SetIcon($alarmMessages, 'Warning');
-
         // State messages
-        $this->RegisterVariableString('StateMessages', 'Zustandsmeldungen', '~TextBox', 2);
+        $this->RegisterVariableString('StateMessages', 'Zustandsmeldungen', '~TextBox', 20);
         $stateMessages = $this->GetIDForIdent('StateMessages');
         IPS_SetIcon($stateMessages, 'Power');
-
         // Event messages
-        $this->RegisterVariableString('EventMessages', 'Ereignismeldungen', '~TextBox', 3);
+        $this->RegisterVariableString('EventMessages', 'Ereignismeldungen', '~TextBox', 30);
         $eventMessages = $this->GetIDForIdent('EventMessages');
         IPS_SetIcon($eventMessages, 'Information');
-
         // Message archive
-        $this->RegisterVariableString('MessageArchive', 'Archivdaten', '~TextBox', 4);
+        $this->RegisterVariableString('MessageArchive', 'Archivdaten', '~TextBox', 40);
         $messageArchive = $this->GetIDForIdent('MessageArchive');
         IPS_SetHidden($messageArchive, true);
     }
@@ -307,5 +325,20 @@ class Alarmprotokoll extends IPSModule
 
         // Set state
         $this->SetStatus($state);
+    }
+
+    private function CheckMaintenanceMode(): bool
+    {
+        $result = false;
+        $status = 102;
+        if ($this->ReadPropertyBoolean('MaintenanceMode')) {
+            $result = true;
+            $status = 104;
+            $this->SendDebug(__FUNCTION__, 'Abbruch, der Wartungsmodus ist aktiv!', 0);
+            $this->LogMessage('ID ' . $this->InstanceID . ', ' . __FUNCTION__ . ', Abbruch, der Wartungsmodus ist aktiv!', KL_WARNING);
+        }
+        $this->SetStatus($status);
+        IPS_SetDisabled($this->InstanceID, $result);
+        return $result;
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
-// Declare
+/** @noinspection PhpUnused */
+
 declare(strict_types=1);
 
 trait APRO_protocol
@@ -18,6 +19,9 @@ trait APRO_protocol
      */
     public function SendMonthlyProtocol(bool $CheckDay, int $ProtocolPeriod): void
     {
+        if ($this->CheckMaintenanceMode()) {
+            return;
+        }
         $recipients = json_decode($this->ReadPropertyString('Recipients'));
         if (!empty($recipients)) {
             // Check if it is the first day of the month
@@ -77,6 +81,9 @@ trait APRO_protocol
      */
     public function SendArchiveProtocol(): void
     {
+        if ($this->CheckMaintenanceMode()) {
+            return;
+        }
         // Get email recipients
         $recipients = json_decode($this->ReadPropertyString('Recipients'));
         if (!empty($recipients)) {
@@ -104,7 +111,7 @@ trait APRO_protocol
         }
     }
 
-    //#################### Private
+    #################### Private
 
     /**
      * Sets the timer for the monthly journal dispatch.
