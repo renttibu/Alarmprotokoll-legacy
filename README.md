@@ -11,4 +11,4 @@
 Folgende Module beinhaltet das Alarmprotokoll Repository:  
 
 - __Alarmprotokoll__ ([Dokumentation](Alarmprotokoll))  
-    Speichert und Daten in ein Archiv und versendet Daten.  
+    Dieses Modul speichert Daten in ein Archiv und versendet Daten.  
