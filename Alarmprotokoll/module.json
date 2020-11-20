@@ -1,8 +1,8 @@
 {
-  "id": "{BC752980-2D17-67B6-9B91-0B4113EECD83}",
+  "id": "{33EF9DF1-C8D7-01E7-F168-0A1927F1C61F}",
   "name": "Alarmprotokoll",
   "type": 3,
-  "vendor": "NTUB",
+  "vendor": "Ulrich Bittner",
   "aliases": [
     "Alarmprotokoll"
   ],
@@ -10,5 +10,5 @@
   "parentRequirements": [],
   "childRequirements": [],
   "implemented": [],
-  "prefix": "APRO"
+  "prefix": "AP"
 }

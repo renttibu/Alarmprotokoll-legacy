@@ -2,115 +2,16 @@
   "elements": [
     {
       "type": "ExpansionPanel",
-      "caption": "Alarmprotokoll",
+      "caption": "Funktionen",
       "items": [
-        {
-          "type": "Image",
-          "image": "data:image/png;base64,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"
-        },
-        {
-          "type": "Label",
-          "caption": "Ein Gemeinschaftsprojekt von Normen Thiel und Ulrich Bittner\n\nMit dieser Instanz können Ereignisse protokolliert und archiviert werden.\nWeitere Informationen entnehmen Sie bitte der Dokumentation.\n"
-        },
-        {
-          "type": "Label",
-          "caption": "Instanz ID:"
-        },
-        {
-          "type": "Label",
-          "caption": "Modul:"
-        },
-        {
-          "type": "Label",
-          "caption": "Version:"
-        },
-        {
-          "type": "Label",
-          "caption": "Datum:"
-        },
-        {
-          "type": "Label",
-          "caption": "Uhrzeit:"
-        },
-        {
-          "type": "Label",
-          "caption": "Entwickler:"
-        },
-        {
-          "type": "Label",
-          "caption": "Präfix:"
-        },
-        {
-          "type": "ValidationTextBox",
-          "name": "Note",
-          "caption": "Notiz",
-          "width": "600px"
-        },
-        {
-          "type": "Label",
-          "caption": " "
-        },
         {
           "type": "CheckBox",
           "name": "MaintenanceMode",
           "caption": "Wartungsmodus"
-        }
-      ]
-    },
-    {
-      "type": "ExpansionPanel",
-      "caption": "Bezeichnung",
-      "items": [
-        {
-          "type": "Label",
-          "caption": "Bitte geben Sie eine eindeutige Bezeichnung für dieses Alarmprotokoll an (z.B. Standortbezeichnung):"
-        },
-        {
-          "type": "ValidationTextBox",
-          "name": "Designation",
-          "caption": "Bezeichnung",
-          "width": "600px"
-        }
-      ]
-    },
-    {
-      "type": "ExpansionPanel",
-      "caption": "Archivierung",
-      "items": [
-        {
-          "type": "Label",
-          "caption": "Bitte wählen Sie das Archiv für die Speicherung der Ereignisse aus:"
-        },
-        {
-          "type": "SelectInstance",
-          "name": "Archive",
-          "caption": "Archiv",
-          "width": "600px"
-        },
-        {
-          "type": "CheckBox",
-          "name": "UseArchiving",
-          "caption": "Archivierung verwenden"
         },
         {
           "type": "Label",
-          "caption": "\nBitte geben Sie den maximalen Zeitraum in den Tagen für die Speicherung der Ereignisse an:"
-        },
-        {
-          "type": "NumberSpinner",
-          "name": "ArchiveRetentionTime",
-          "caption": "Zeitraum",
-          "suffix": "Tage"
-        }
-      ]
-    },
-    {
-      "type": "ExpansionPanel",
-      "caption": "Meldungen",
-      "items": [
-        {
-          "type": "Label",
-          "caption": "Bitte wählen Sie aus, welche Meldungen angezeigt werden sollen:"
+          "caption": " "
         },
         {
           "type": "CheckBox",
@@ -129,7 +30,7 @@
         },
         {
           "type": "Label",
-          "caption": "\nBitte geben Sie den Zeitraum in Tagen für die anzuzeigenden Alarmmeldungen an:"
+          "caption": " "
         },
         {
           "type": "NumberSpinner",
@@ -138,18 +39,10 @@
           "suffix": "Tage"
         },
         {
-          "type": "Label",
-          "caption": "\nBitte geben Sie die Anzahl der anzuzeigenden Zustandsmeldungen an:"
-        },
-        {
           "type": "NumberSpinner",
           "name": "AmountStateMessages",
           "caption": "Zustandsmeldungen",
           "suffix": "Meldungen"
-        },
-        {
-          "type": "Label",
-          "caption": "\nBitte geben Sie den Zeitraum in Tagen für die anzuzeigenden Ereignismeldungen an:"
         },
         {
           "type": "NumberSpinner",
@@ -161,20 +54,47 @@
     },
     {
       "type": "ExpansionPanel",
-      "caption": "E-Mail Versand",
+      "caption": "Bezeichnung",
       "items": [
         {
-          "type": "Label",
-          "caption": "Bitte geben Sie den Betreff für das Montasprotokoll an:"
+          "type": "ValidationTextBox",
+          "name": "Designation",
+          "caption": "Bezeichnung (z.B. Standortbezeichnung)",
+          "width": "600px"
+        }
+      ]
+    },
+    {
+      "type": "ExpansionPanel",
+      "caption": "Archivierung",
+      "items": [
+        {
+          "type": "CheckBox",
+          "name": "UseArchiving",
+          "caption": "Archivierung"
         },
+        {
+          "type": "SelectModule",
+          "name": "Archive",
+          "caption": "Archiv",
+          "moduleID": "{43192F0B-135B-4CE7-A0A7-1475603F3060}"
+        },
+        {
+          "type": "NumberSpinner",
+          "name": "ArchiveRetentionTime",
+          "caption": "Datenspeicherung",
+          "suffix": "Tage"
+        }
+      ]
+    },
+    {
+      "type": "ExpansionPanel",
+      "caption": "E-Mail Versand",
+      "items": [
         {
           "type": "ValidationTextBox",
           "name": "MonthlyProtocolSubject",
           "caption": "Betreff Monatsprotokoll"
-        },
-        {
-          "type": "Label",
-          "caption": "\nBitte geben Sie den Betreff für das Archivprotokoll an:"
         },
         {
           "type": "ValidationTextBox",
@@ -182,13 +102,8 @@
           "caption": "Betreff Archivprotokoll"
         },
         {
-          "type": "Label",
-          "caption": "\nBitte fügen Sie die Empfänger hinzu:"
-        },
-        {
           "type": "List",
           "name": "Recipients",
-          "caption": "E-Mail Empfänger",
           "rowCount": 3,
           "add": true,
           "delete": true,
@@ -207,7 +122,7 @@
               }
             },
             {
-              "caption": "Name des Empfängers",
+              "caption": "Empfänger",
               "name": "Name",
               "width": "350px",
               "add": "",
@@ -225,12 +140,13 @@
               }
             },
             {
-              "caption": "SMTP",
+              "caption": "SMTP Instanz",
               "name": "ID",
-              "width": "350px",
               "add": 0,
+              "width": "350px",
               "edit": {
-                "type": "SelectInstance"
+                "type": "SelectModule",
+                "moduleID": "{375EAF21-35EF-4BC4-83B3-C780FD8BD88A}"
               }
             },
             {
@@ -264,7 +180,7 @@
         {
           "type": "Button",
           "caption": "Neu einlesen",
-          "onClick": "APRO_ReloadConfiguration($id);"
+          "onClick": "AP_ReloadConfiguration($id);"
         },
         {
           "type": "RowLayout",
@@ -282,7 +198,7 @@
             {
               "type": "Button",
               "caption": "Sichern",
-              "onClick": "APRO_CreateBackup($id, $BackupCategory);"
+              "onClick": "AP_CreateBackup($id, $BackupCategory);"
             }
           ]
         },
@@ -292,7 +208,7 @@
             {
               "type": "SelectScript",
               "name": "ConfigurationScript",
-              "caption": "Konfigurationsskript",
+              "caption": "Konfiguration",
               "width": "600px"
             },
             {
@@ -308,7 +224,7 @@
                   {
                     "type": "Button",
                     "caption": "Wiederherstellen",
-                    "onClick": "APRO_RestoreConfiguration($id, $ConfigurationScript);"
+                    "onClick": "AP_RestoreConfiguration($id, $ConfigurationScript);"
                   }
                 ]
               }
@@ -324,7 +240,7 @@
         {
           "type": "Button",
           "caption": "Status anzeigen",
-          "onClick": "APRO_ShowArchiveState($id);"
+          "onClick": "AP_ShowArchiveState($id);"
         },
         {
           "type": "PopupButton",
@@ -335,7 +251,7 @@
               {
                 "type": "Button",
                 "caption": "Archivdaten aufräumen",
-                "onClick": "APRO_CleanUpArchiveData($id); echo 'Die archivierten Daten wurden erfolgreich aufgeräumt!';"
+                "onClick": "AP_CleanUpArchiveData($id); echo 'Die archivierten Daten wurden erfolgreich aufgeräumt!';"
               }
             ]
           }
@@ -355,7 +271,7 @@
               {
                 "type": "Button",
                 "caption": "Ereignismeldungen löschen",
-                "onClick": "APRO_DeleteEventMessages($id);"
+                "onClick": "AP_DeleteEventMessages($id);"
               }
             ]
           }
@@ -369,7 +285,7 @@
               {
                 "type": "Button",
                 "caption": "Zustandsmeldungen löschen",
-                "onClick": "APRO_DeleteStateMessages($id);"
+                "onClick": "AP_DeleteStateMessages($id);"
               }
             ]
           }
@@ -383,7 +299,7 @@
               {
                 "type": "Button",
                 "caption": "Alarmmeldungen löschen",
-                "onClick": "APRO_DeleteAlarmMessages($id);"
+                "onClick": "AP_DeleteAlarmMessages($id);"
               }
             ]
           }
@@ -397,7 +313,7 @@
               {
                 "type": "Button",
                 "caption": "Alle Meldungen löschen",
-                "onClick": "APRO_DeleteMessages($id);"
+                "onClick": "AP_DeleteMessages($id);"
               }
             ]
           }
@@ -411,12 +327,12 @@
         {
           "type": "Button",
           "caption": "Vormonat versenden",
-          "onClick": "APRO_SendMonthlyProtocol($id, false, 1);"
+          "onClick": "AP_SendMonthlyProtocol($id, false, 1);"
         },
         {
           "type": "Button",
           "caption": "Aktueller Monat versenden",
-          "onClick": "APRO_SendMonthlyProtocol($id, false, 0);"
+          "onClick": "AP_SendMonthlyProtocol($id, false, 0);"
         }
       ]
     },
@@ -427,7 +343,7 @@
         {
           "type": "Button",
           "caption": "Archivprotokoll versenden",
-          "onClick": "APRO_SendArchiveProtocol($id);"
+          "onClick": "AP_SendArchiveProtocol($id);"
         }
       ]
     }

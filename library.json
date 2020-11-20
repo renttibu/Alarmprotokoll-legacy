@@ -4,9 +4,9 @@
     "name": "Alarmprotokoll",
     "url": "https://github.com/ubittner/Alarmprotokoll",
     "compatibility": {
-        "version": "5.2"
+        "version": "5.5"
     },
-    "version": "4.00",
-    "build": 2,
-    "date": 1597307030
+    "version": "5.00",
+    "build": 1,
+    "date": 1605863245
 }

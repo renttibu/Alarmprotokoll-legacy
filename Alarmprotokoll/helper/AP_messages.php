@@ -3,9 +3,25 @@
 /** @noinspection DuplicatedCode */
 /** @noinspection PhpUnused */
 
+/*
+ * @module      Alarmprotokoll
+ *
+ * @prefix      AP
+ *
+ * @file        AP_messages.php
+ *
+ * @author      Ulrich Bittner
+ * @copyright   (c) 2020
+ * @license    	CC BY-NC-SA 4.0
+ *              https://creativecommons.org/licenses/by-nc-sa/4.0/
+ *
+ * @see         https://github.com/ubittner/Alarmprotokoll
+ *
+ */
+
 declare(strict_types=1);
 
-trait APRO_messages
+trait AP_messages
 {
     /**
      * Updates the logging messages in the alarm protocol.
@@ -21,13 +37,13 @@ trait APRO_messages
         if ($this->CheckMaintenanceMode()) {
             return;
         }
-        // Write to archive variable first
+        //Write to archive variable first
         $archiveRetentionTime = $this->ReadPropertyInteger('ArchiveRetentionTime');
         if ($archiveRetentionTime > 0) {
             $this->SetValue('MessageArchive', $Message);
         }
         switch ($Type) {
-            // 0: Event
+            //0: Event
             case 0:
                 $eventMessagesRetentionTime = $this->ReadPropertyInteger('EventMessagesRetentionTime');
                 if ($eventMessagesRetentionTime > 0) {
@@ -35,7 +51,7 @@ trait APRO_messages
                 }
                 break;
 
-            // 1: State
+            //1: State
             case 1:
                 $amountStateMessages = $this->ReadPropertyInteger('AmountStateMessages');
                 if ($amountStateMessages > 0) {
@@ -44,7 +60,7 @@ trait APRO_messages
                 }
                 break;
 
-            // 2: Alarm
+            //2: Alarm
             case 2:
                 $alarmMessagesRetentionTime = $this->ReadPropertyInteger('AlarmMessagesRetentionTime');
                 if ($alarmMessagesRetentionTime > 0) {
@@ -61,13 +77,13 @@ trait APRO_messages
      */
     public function DeleteMessages(): void
     {
-        // Alarm messages
+        //Alarm messages
         $this->SetValue('AlarmMessages', 'Keine Alarmmeldungen vorhanden!');
 
-        // State messages
+        //State messages
         $this->SetValue('StateMessages', 'Keine Zustandsmeldungen vorhanden!');
 
-        // Event messages
+        //Event messages
         $this->SetValue('EventMessages', 'Keine Ereignismeldungen vorhanden!');
     }
 
@@ -102,9 +118,9 @@ trait APRO_messages
     {
         $retentionTime = $this->ReadPropertyInteger('AlarmMessagesRetentionTime');
         if ($retentionTime > 0) {
-            // Get messages
+            //Get messages
             $content = array_merge(array_filter(explode("\n", $this->GetValue('AlarmMessages'))));
-            // Check retention time
+            //Check retention time
             foreach ($content as $key => $message) {
                 $year = (int) substr($message, 6, 4);
                 $month = (int) substr($message, 3, 2);
@@ -142,11 +158,11 @@ trait APRO_messages
         }
         $retentionTime = $this->ReadPropertyInteger('EventMessagesRetentionTime');
         if ($retentionTime > 0) {
-            // Get messages
+            //Get messages
             $content = array_merge(array_filter(explode("\n", $this->GetValue('EventMessages'))));
-            // Check retention time
+            //Check retention time
             foreach ($content as $key => $message) {
-                // Delete empty message hint
+                //Delete empty message hint
                 if (strpos($message, 'Keine Ereignismeldungen vorhanden!') !== false) {
                     unset($content[$key]);
                 }
@@ -167,7 +183,7 @@ trait APRO_messages
                     }
                 }
             }
-            // Add new message at beginning
+            //Add new message at beginning
             array_unshift($content, $Message);
             $newContent = implode("\n", $content);
             $this->SetValue('EventMessages', $newContent);
@@ -184,15 +200,15 @@ trait APRO_messages
         if ($this->CheckMaintenanceMode()) {
             return;
         }
-        // Check amount of messages to display
+        //Check amount of messages to display
         $amountStateMessages = $this->ReadPropertyInteger('AmountStateMessages');
         if ($amountStateMessages > 0) {
             if ($amountStateMessages == 1) {
                 $this->SetValue('AlarmMessages', $Message);
             } else {
-                // Get messages
+                //Get messages
                 $content = array_merge(array_filter(explode("\n", $this->GetValue('StateMessages'))));
-                // Delete empty message hint
+                //Delete empty message hint
                 foreach ($content as $key => $message) {
                     // Delete empty message hint
                     if (strpos($message, 'Keine Zustandsmeldungen vorhanden!') !== false) {
@@ -220,11 +236,11 @@ trait APRO_messages
         }
         $retentionTime = $this->ReadPropertyInteger('AlarmMessagesRetentionTime');
         if ($retentionTime > 0) {
-            // Get messages
+            //Get messages
             $content = array_merge(array_filter(explode("\n", $this->GetValue('AlarmMessages'))));
-            // Check retention time
+            //Check retention time
             foreach ($content as $key => $message) {
-                // Delete empty message hint
+                //Delete empty message hint
                 if (strpos($message, 'Keine Alarmmeldungen vorhanden!') !== false) {
                     unset($content[$key]);
                 }
@@ -245,7 +261,7 @@ trait APRO_messages
                     }
                 }
             }
-            // Add new message at beginning
+            //Add new message at beginning
             array_unshift($content, $Message);
             $newContent = implode("\n", $content);
             $this->SetValue('AlarmMessages', $newContent);
@@ -260,7 +276,7 @@ trait APRO_messages
      */
     private function SetTimerResetAlarmMessages(): void
     {
-        // Set timer to next day
+        //Set timer to next day
         $timestamp = mktime(0, 05, 0, (int) date('n'), (int) date('j') + 1, (int) date('Y'));
         $now = time();
         $timerInterval = ($timestamp - $now) * 1000;

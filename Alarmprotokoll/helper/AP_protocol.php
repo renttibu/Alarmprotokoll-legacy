@@ -2,9 +2,25 @@
 
 /** @noinspection PhpUnused */
 
+/*
+ * @module      Alarmprotokoll
+ *
+ * @prefix      AP
+ *
+ * @file        AP_protocol.php
+ *
+ * @author      Ulrich Bittner
+ * @copyright   (c) 2020
+ * @license    	CC BY-NC-SA 4.0
+ *              https://creativecommons.org/licenses/by-nc-sa/4.0/
+ *
+ * @see         https://github.com/ubittner/Alarmprotokoll
+ *
+ */
+
 declare(strict_types=1);
 
-trait APRO_protocol
+trait AP_protocol
 {
     /**
      * Sends the monthly journal.
@@ -24,16 +40,16 @@ trait APRO_protocol
         }
         $recipients = json_decode($this->ReadPropertyString('Recipients'));
         if (!empty($recipients)) {
-            // Check if it is the first day of the month
+            //Check if it is the first day of the month
             $day = date('j');
             if ($day == '1' || !$CheckDay) {
-                // Prepare data
+                //Prepare data
                 $archive = $this->ReadPropertyInteger('Archive');
                 if ($archive != 0) {
-                    // This month
+                    //This month
                     $startTime = strtotime('first day of this month midnight');
                     $endTime = strtotime('first day of next month midnight') - 1;
-                    // Last month
+                    //Last month
                     if ($ProtocolPeriod == 1) {
                         $startTime = strtotime('first day of previous month midnight');
                         $endTime = strtotime('first day of this month midnight') - 1;
@@ -63,7 +79,7 @@ trait APRO_protocol
                             $text .= $message['Value'] . "\n";
                         }
                     }
-                    // Send mail to recipients
+                    //Send mail to recipients
                     foreach ($recipients as $recipient) {
                         if ($recipient->MonthlyProtocol && $recipient->ID != 0 && !empty($recipient->Address) && $recipient->Use) {
                             $mailSubject = $this->ReadPropertyString('MonthlyProtocolSubject') . ' ' . $monthName[$month] . ' ' . $year . ', ' . $designation;
@@ -84,11 +100,11 @@ trait APRO_protocol
         if ($this->CheckMaintenanceMode()) {
             return;
         }
-        // Get email recipients
+        //Get email recipients
         $recipients = json_decode($this->ReadPropertyString('Recipients'));
         if (!empty($recipients)) {
-            // Prepare data
-            // Set start time to 2000-01-01 12:00 am
+            //Prepare data
+            //Set start time to 2000-01-01 12:00 am
             $startTime = 946684800;
             $endTime = time();
             $designation = $this->ReadPropertyString('Designation');
@@ -101,7 +117,7 @@ trait APRO_protocol
                     $text .= $message['Value'] . "\n";
                 }
             }
-            // Send mail to defined recipients
+            //Send mail to defined recipients
             foreach ($recipients as $recipient) {
                 if ($recipient->ArchiveProtocol && $recipient->ID != 0 && !empty($recipient->Address) && $recipient->Use) {
                     $mailSubject = $this->ReadPropertyString('ArchiveProtocolSubject') . ' ' . $designation;
@@ -120,10 +136,10 @@ trait APRO_protocol
     {
         $archiveRetentionTime = $this->ReadPropertyInteger('ArchiveRetentionTime');
         if ($archiveRetentionTime > 0) {
-            // Set timer for monthly journal
+            //Set timer for monthly journal
             $instanceStatus = @IPS_GetInstance($this->InstanceID)['InstanceStatus'];
             if ($this->ReadPropertyInteger('Archive') != 0 && $instanceStatus == 102) {
-                // Set timer to next date
+                //Set timer to next date
                 $timestamp = strtotime('next day noon');
                 $now = time();
                 $interval = ($timestamp - $now) * 1000;

@@ -2,9 +2,25 @@
 
 /** @noinspection PhpUnused */
 
+/*
+ * @module      Alarmprotokoll
+ *
+ * @prefix      AP
+ *
+ * @file        AP_archive.php
+ *
+ * @author      Ulrich Bittner
+ * @copyright   (c) 2020
+ * @license    	CC BY-NC-SA 4.0
+ *              https://creativecommons.org/licenses/by-nc-sa/4.0/
+ *
+ * @see         https://github.com/ubittner/Alarmprotokoll
+ *
+ */
+
 declare(strict_types=1);
 
-trait APRO_archive
+trait AP_archive
 {
     /**
      * Enables and disables the logging to the archive instance.
@@ -78,13 +94,13 @@ trait APRO_archive
         $archive = $this->ReadPropertyInteger('Archive');
         $instanceStatus = @IPS_GetInstance($this->InstanceID)['InstanceStatus'];
         if ($archive != 0 && @IPS_ObjectExists($archive) && $instanceStatus == 102) {
-            // Set start time to 2000-01-01 12:00 am
+            //Set start time to 2000-01-01 12:00 am
             $startTime = 946684800;
-            // Calculate end time
+            //Calculate end time
             $retentionTime = $this->ReadPropertyInteger('ArchiveRetentionTime');
             $endTime = strtotime('-' . $retentionTime . ' days');
             @AC_DeleteVariableData($archive, $this->GetIDForIdent('MessageArchive'), $startTime, $endTime);
-            // Set timer to next 24 hours
+            //Set timer to next 24 hours
             $this->SetTimerCleanUpArchiveData();
         }
     }
@@ -98,11 +114,11 @@ trait APRO_archive
     {
         $archiveRetentionTime = $this->ReadPropertyInteger('ArchiveRetentionTime');
         if ($archiveRetentionTime > 0) {
-            // Set timer for deleting archive data
+            //Set timer for deleting archive data
             $instanceStatus = @IPS_GetInstance($this->InstanceID)['InstanceStatus'];
             $archive = $this->ReadPropertyInteger('Archive');
             if ($archive != 0 && @IPS_ObjectExists($archive) && $instanceStatus == 102) {
-                // Set timer to next date
+                //Set timer to next date
                 $timestamp = mktime(2, 00, 0, (int) date('n'), (int) date('j') + 1, (int) date('Y'));
                 $now = time();
                 $timerInterval = ($timestamp - $now) * 1000;
