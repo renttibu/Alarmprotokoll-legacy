@@ -52,26 +52,26 @@ class Alarmprotokoll extends IPSModule
         $id = @$this->GetIDForIdent('AlarmMessages');
         $this->RegisterVariableString('AlarmMessages', 'Alarmmeldung', '~TextBox', 10);
         if ($id == false) {
-            IPS_SetIcon($id, 'Warning');
+            IPS_SetIcon($this->GetIDForIdent('AlarmMessages'), 'Warning');
         }
         // State messages
         $id = @$this->GetIDForIdent('StateMessages');
         $this->RegisterVariableString('StateMessages', 'Zustandsmeldungen', '~TextBox', 20);
         if ($id == false) {
-            IPS_SetIcon($id, 'Power');
+            IPS_SetIcon($this->GetIDForIdent('StateMessages'), 'Power');
         }
         // Event messages
         $id = @$this->GetIDForIdent('EventMessages');
         $this->RegisterVariableString('EventMessages', 'Ereignismeldungen', '~TextBox', 30);
         if ($id == false) {
-            IPS_SetIcon($id, 'Information');
+            IPS_SetIcon($this->GetIDForIdent('EventMessages'), 'Information');
         }
 
         // Message archive
         $id = @$this->GetIDForIdent('MessageArchive');
         $this->RegisterVariableString('MessageArchive', 'Archivdaten', '~TextBox', 40);
         if ($id == false) {
-            IPS_SetHidden($id, true);
+            IPS_SetHidden($this->GetIDForIdent('MessageArchive'), true);
         }
 
         // Timers
