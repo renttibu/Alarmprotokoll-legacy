@@ -372,7 +372,7 @@
     {
       "code": 200,
       "icon": "inactive",
-      "caption": "Es ist Fehler aufgetreten, weitere Informationen unter Meldungen oder im Log"
+      "caption": "Es ist Fehler aufgetreten, weitere Informationen unter Meldungen, im Log oder Debug!"
     }
   ]
 }

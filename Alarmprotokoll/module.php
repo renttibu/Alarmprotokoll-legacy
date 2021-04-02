@@ -1,22 +1,13 @@
 <?php
 
-/** @noinspection PhpUnused */
-
 /*
- * @module      Alarmprotokoll (20201120-1007)
- *
- * @prefix      AP
- *
- * @file        module.php
- *
  * @author      Ulrich Bittner
- * @copyright   (c) 2020
+ * @copyright   (c) 2020, 2021
  * @license    	CC BY-NC-SA 4.0
- *              https://creativecommons.org/licenses/by-nc-sa/4.0/
- *
- * @see         https://github.com/ubittner/Alarmprotokoll
- *
+ * @see         https://github.com/ubittner/Alarmprotokoll/
  */
+
+/** @noinspection PhpUnused */
 
 declare(strict_types=1);
 
@@ -24,7 +15,7 @@ include_once __DIR__ . '/helper/autoload.php';
 
 class Alarmprotokoll extends IPSModule
 {
-    //Helper
+    // Helper
     use AP_archive;
     use AP_backupRestore;
     use AP_messages;
@@ -32,35 +23,88 @@ class Alarmprotokoll extends IPSModule
 
     public function Create()
     {
-        //Never delete this line!
+        // Never delete this line!
         parent::Create();
-        $this->RegisterProperties();
-        $this->RegisterVariables();
-        $this->RegisterTimers();
-    }
 
-    public function Destroy()
-    {
-        //Never delete this line!
-        parent::Destroy();
+        // Properties
+        // Function
+        $this->RegisterPropertyBoolean('MaintenanceMode', false);
+        // Designation
+        $this->RegisterPropertyString('Designation', '');
+        // Archive
+        $this->RegisterPropertyInteger('Archive', 0);
+        $this->RegisterPropertyBoolean('UseArchiving', false);
+        $this->RegisterPropertyInteger('ArchiveRetentionTime', 90);
+        // Messages
+        $this->RegisterPropertyBoolean('EnableAlarmMessages', true);
+        $this->RegisterPropertyBoolean('EnableStateMessages', true);
+        $this->RegisterPropertyBoolean('EnableEventMessages', true);
+        $this->RegisterPropertyInteger('AlarmMessagesRetentionTime', 2);
+        $this->RegisterPropertyInteger('AmountStateMessages', 8);
+        $this->RegisterPropertyInteger('EventMessagesRetentionTime', 7);
+        // E-Mail dispatch
+        $this->RegisterPropertyString('MonthlyProtocolSubject', 'Monatsprotokoll');
+        $this->RegisterPropertyString('ArchiveProtocolSubject', 'Archivprotokoll');
+        $this->RegisterPropertyString('Recipients', '[]');
+
+        // Variables
+        // Alarm messages
+        $id = @$this->GetIDForIdent('AlarmMessages');
+        $this->RegisterVariableString('AlarmMessages', 'Alarmmeldung', '~TextBox', 10);
+        if ($id == false) {
+            IPS_SetIcon($id, 'Warning');
+        }
+        // State messages
+        $id = @$this->GetIDForIdent('StateMessages');
+        $this->RegisterVariableString('StateMessages', 'Zustandsmeldungen', '~TextBox', 20);
+        if ($id == false) {
+            IPS_SetIcon($id, 'Power');
+        }
+        // Event messages
+        $id = @$this->GetIDForIdent('EventMessages');
+        $this->RegisterVariableString('EventMessages', 'Ereignismeldungen', '~TextBox', 30);
+        if ($id == false) {
+            IPS_SetIcon($id, 'Information');
+        }
+
+        // Message archive
+        $id = @$this->GetIDForIdent('MessageArchive');
+        $this->RegisterVariableString('MessageArchive', 'Archivdaten', '~TextBox', 40);
+        if ($id == false) {
+            IPS_SetHidden($id, true);
+        }
+
+        // Timers
+        $this->RegisterTimer('ResetAlarmMessages', 0, 'AP_ResetAlarmMessages(' . $this->InstanceID . ');');
+        $this->RegisterTimer('SendMonthlyProtocol', 0, 'AP_SendMonthlyProtocol(' . $this->InstanceID . ', true, 1);');
+        $this->RegisterTimer('CleanUpArchiveData', 0, 'AP_CleanUpArchiveData(' . $this->InstanceID . ');');
     }
 
     public function ApplyChanges()
     {
-        //Wait until IP-Symcon is started
+        // Wait until IP-Symcon is started
         $this->RegisterMessage(0, IPS_KERNELSTARTED);
-        //Never delete this line!
+
+        // Never delete this line!
         parent::ApplyChanges();
-        //Check runlevel
+
+        // Check runlevel
         if (IPS_GetKernelRunlevel() != KR_READY) {
             return;
         }
+
         $this->SetArchiveLogging($this->ReadPropertyBoolean('UseArchiving'));
         $this->RenameMessages();
         $this->SetTimerResetAlarmMessages();
         $this->SetTimerSendMonthlyProtocol();
         $this->SetTimerCleanUpArchiveData();
         $this->ValidateConfiguration();
+    }
+
+    public function Destroy()
+    {
+        // Never delete this line!
+        parent::Destroy();
     }
 
     public function MessageSink($TimeStamp, $SenderID, $Message, $Data)
@@ -92,59 +136,9 @@ class Alarmprotokoll extends IPSModule
         $this->ApplyChanges();
     }
 
-    private function RegisterProperties(): void
-    {
-        //Function
-        $this->RegisterPropertyBoolean('MaintenanceMode', false);
-        //Designation
-        $this->RegisterPropertyString('Designation', '');
-        //Archive
-        $this->RegisterPropertyInteger('Archive', 0);
-        $this->RegisterPropertyBoolean('UseArchiving', false);
-        $this->RegisterPropertyInteger('ArchiveRetentionTime', 90);
-        //Messages
-        $this->RegisterPropertyBoolean('EnableAlarmMessages', true);
-        $this->RegisterPropertyBoolean('EnableStateMessages', true);
-        $this->RegisterPropertyBoolean('EnableEventMessages', true);
-        $this->RegisterPropertyInteger('AlarmMessagesRetentionTime', 2);
-        $this->RegisterPropertyInteger('AmountStateMessages', 8);
-        $this->RegisterPropertyInteger('EventMessagesRetentionTime', 7);
-        //E-Mail dispatch
-        $this->RegisterPropertyString('MonthlyProtocolSubject', 'Monatsprotokoll');
-        $this->RegisterPropertyString('ArchiveProtocolSubject', 'Archivprotokoll');
-        $this->RegisterPropertyString('Recipients', '[]');
-    }
-
-    private function RegisterVariables(): void
-    {
-        //Alarm messages
-        $this->RegisterVariableString('AlarmMessages', 'Alarmmeldung', '~TextBox', 10);
-        $alarmMessages = $this->GetIDForIdent('AlarmMessages');
-        IPS_SetIcon($alarmMessages, 'Warning');
-        //State messages
-        $this->RegisterVariableString('StateMessages', 'Zustandsmeldungen', '~TextBox', 20);
-        $stateMessages = $this->GetIDForIdent('StateMessages');
-        IPS_SetIcon($stateMessages, 'Power');
-        //Event messages
-        $this->RegisterVariableString('EventMessages', 'Ereignismeldungen', '~TextBox', 30);
-        $eventMessages = $this->GetIDForIdent('EventMessages');
-        IPS_SetIcon($eventMessages, 'Information');
-        //Message archive
-        $this->RegisterVariableString('MessageArchive', 'Archivdaten', '~TextBox', 40);
-        $messageArchive = $this->GetIDForIdent('MessageArchive');
-        IPS_SetHidden($messageArchive, true);
-    }
-
-    private function RegisterTimers(): void
-    {
-        $this->RegisterTimer('ResetAlarmMessages', 0, 'AP_ResetAlarmMessages(' . $this->InstanceID . ');');
-        $this->RegisterTimer('SendMonthlyProtocol', 0, 'AP_SendMonthlyProtocol(' . $this->InstanceID . ', true, 1);');
-        $this->RegisterTimer('CleanUpArchiveData', 0, 'AP_CleanUpArchiveData(' . $this->InstanceID . ');');
-    }
-
     private function RenameMessages(): void
     {
-        //Rename alarm messages
+        // Rename alarm messages
         $alarmMessagesRetentionTime = $this->ReadPropertyInteger('AlarmMessagesRetentionTime');
         switch ($alarmMessagesRetentionTime) {
             case 0:
@@ -166,7 +160,8 @@ class Alarmprotokoll extends IPSModule
         $id = $this->GetIDForIdent('AlarmMessages');
         IPS_SetName($id, $name);
         IPS_SetHidden($id, !$this->ReadPropertyBoolean('EnableAlarmMessages'));
-        //Rename state messages
+
+        // Rename state messages
         $amountStateMessages = $this->ReadPropertyInteger('AmountStateMessages');
         switch ($amountStateMessages) {
             case 0:
@@ -188,6 +183,7 @@ class Alarmprotokoll extends IPSModule
         $id = $this->GetIDForIdent('StateMessages');
         IPS_SetName($id, $name);
         IPS_SetHidden($id, !$this->ReadPropertyBoolean('EnableStateMessages'));
+
         // Rename event messages
         $eventMessagesRetentionTime = $this->ReadPropertyInteger('EventMessagesRetentionTime');
         switch ($eventMessagesRetentionTime) {
@@ -210,7 +206,8 @@ class Alarmprotokoll extends IPSModule
         $id = $this->GetIDForIdent('EventMessages');
         IPS_SetName($id, $name);
         IPS_SetHidden($id, !$this->ReadPropertyBoolean('EnableEventMessages'));
-        //Rename message archive
+
+        // Rename message archive
         $archiveRetentionTime = $this->ReadPropertyInteger('ArchiveRetentionTime');
         switch ($archiveRetentionTime) {
             case 0:
@@ -235,7 +232,7 @@ class Alarmprotokoll extends IPSModule
     {
         $result = true;
         $status = 102;
-        //Archive
+        // Archive
         $id = $this->ReadPropertyInteger('Archive');
         if (@!IPS_ObjectExists($id)) {
             $status = 200;
@@ -243,7 +240,7 @@ class Alarmprotokoll extends IPSModule
             $this->SendDebug(__FUNCTION__, $text, 0);
             $this->LogMessage('ID ' . $this->InstanceID . ', ' . __FUNCTION__ . ', ' . $text, KL_WARNING);
         }
-        //E-Mail recipients
+        // E-Mail recipients
         $recipients = json_decode($this->ReadPropertyString('Recipients'));
         if (!empty($recipients)) {
             foreach ($recipients as $recipient) {
@@ -265,7 +262,7 @@ class Alarmprotokoll extends IPSModule
                 }
             }
         }
-        //Maintenance mode
+        // Maintenance mode
         $maintenance = $this->CheckMaintenanceMode();
         if ($maintenance) {
             $status = 104;
