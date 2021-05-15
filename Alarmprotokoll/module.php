@@ -106,6 +106,29 @@ class Alarmprotokoll extends IPSModule
         $this->SetTimerSendMonthlyProtocol();
         $this->SetTimerCleanUpArchiveData();
         $this->ValidateConfiguration();
+
+        // Delete all references in order to read them
+        foreach ($this->GetReferenceList() as $referenceID) {
+            $this->UnregisterReference($referenceID);
+        }
+        $id = $this->ReadPropertyInteger('Archive');
+        if ($id != 0 && @IPS_ObjectExists($id)) {
+            if ($this->ReadPropertyBoolean('UseArchiving')) {
+                $this->RegisterReference($id);
+            }
+        }
+        $id = $this->ReadPropertyInteger('MonthlyMailer');
+        if ($id != 0 && @IPS_ObjectExists($id)) {
+            if ($this->ReadPropertyBoolean('UseMonthlyProtocol')) {
+                $this->RegisterReference($id);
+            }
+        }
+        $id = $this->ReadPropertyInteger('ArchiveMailer');
+        if ($id != 0 && @IPS_ObjectExists($id)) {
+            if ($this->ReadPropertyBoolean('UseArchiveProtocol')) {
+                $this->RegisterReference($id);
+            }
+        }
     }
 
     public function Destroy()
