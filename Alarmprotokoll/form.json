@@ -68,107 +68,12 @@
       "type": "ExpansionPanel",
       "caption": "Archivierung",
       "items": [
-        {
-          "type": "CheckBox",
-          "name": "UseArchiving",
-          "caption": "Archivierung"
-        },
-        {
-          "type": "SelectModule",
-          "name": "Archive",
-          "caption": "Archiv",
-          "moduleID": "{43192F0B-135B-4CE7-A0A7-1475603F3060}"
-        },
-        {
-          "type": "NumberSpinner",
-          "name": "ArchiveRetentionTime",
-          "caption": "Datenspeicherung",
-          "suffix": "Tage"
-        }
       ]
     },
     {
       "type": "ExpansionPanel",
-      "caption": "E-Mail Versand",
+      "caption": "Protokolle",
       "items": [
-        {
-          "type": "ValidationTextBox",
-          "name": "MonthlyProtocolSubject",
-          "caption": "Betreff Monatsprotokoll"
-        },
-        {
-          "type": "ValidationTextBox",
-          "name": "ArchiveProtocolSubject",
-          "caption": "Betreff Archivprotokoll"
-        },
-        {
-          "type": "List",
-          "name": "Recipients",
-          "rowCount": 3,
-          "add": true,
-          "delete": true,
-          "sort": {
-            "column": "Name",
-            "direction": "ascending"
-          },
-          "columns": [
-            {
-              "caption": "Aktiviert",
-              "name": "Use",
-              "width": "100px",
-              "add": true,
-              "edit": {
-                "type": "CheckBox"
-              }
-            },
-            {
-              "caption": "Empfänger",
-              "name": "Name",
-              "width": "350px",
-              "add": "",
-              "edit": {
-                "type": "ValidationTextBox"
-              }
-            },
-            {
-              "caption": "E-Mail Adresse",
-              "name": "Address",
-              "width": "350px",
-              "add": "@",
-              "edit": {
-                "type": "ValidationTextBox"
-              }
-            },
-            {
-              "caption": "SMTP Instanz",
-              "name": "ID",
-              "add": 0,
-              "width": "350px",
-              "edit": {
-                "type": "SelectModule",
-                "moduleID": "{375EAF21-35EF-4BC4-83B3-C780FD8BD88A}"
-              }
-            },
-            {
-              "caption": "Monatsprotokoll",
-              "name": "MonthlyProtocol",
-              "width": "150px",
-              "add": true,
-              "edit": {
-                "type": "CheckBox"
-              }
-            },
-            {
-              "caption": "Archivprotokoll",
-              "name": "ArchiveProtocol",
-              "width": "150px",
-              "add": true,
-              "edit": {
-                "type": "CheckBox"
-              }
-            }
-          ]
-        }
       ]
     }
   ],
@@ -264,6 +169,20 @@
       "items": [
         {
           "type": "PopupButton",
+          "caption": "Alle Meldungen löschen",
+          "popup": {
+            "caption": "Alle Meldungen wirklich löschen?",
+            "items": [
+              {
+                "type": "Button",
+                "caption": "Alle Meldungen löschen",
+                "onClick": "AP_DeleteMessages($id);"
+              }
+            ]
+          }
+        },
+        {
+          "type": "PopupButton",
           "caption": "Ereignismeldungen löschen",
           "popup": {
             "caption": "Ereignismeldungen wirklich löschen?",
@@ -303,26 +222,12 @@
               }
             ]
           }
-        },
-        {
-          "type": "PopupButton",
-          "caption": "Alle Meldungen löschen",
-          "popup": {
-            "caption": "Alle Meldungen wirklich löschen?",
-            "items": [
-              {
-                "type": "Button",
-                "caption": "Alle Meldungen löschen",
-                "onClick": "AP_DeleteMessages($id);"
-              }
-            ]
-          }
         }
       ]
     },
     {
       "type": "ExpansionPanel",
-      "caption": "Monatsprotokoll",
+      "caption": "Protokolle",
       "items": [
         {
           "type": "Button",
@@ -333,46 +238,13 @@
           "type": "Button",
           "caption": "Aktueller Monat versenden",
           "onClick": "AP_SendMonthlyProtocol($id, false, 0);"
-        }
-      ]
-    },
-    {
-      "type": "ExpansionPanel",
-      "caption": "Archivprotokoll",
-      "items": [
+        },
         {
           "type": "Button",
           "caption": "Archivprotokoll versenden",
           "onClick": "AP_SendArchiveProtocol($id);"
         }
       ]
-    }
-  ],
-  "status": [
-    {
-      "code": 101,
-      "icon": "active",
-      "caption": "Alarmprotokoll wird erstellt"
-    },
-    {
-      "code": 102,
-      "icon": "active",
-      "caption": "Alarmprotokoll ist aktiv"
-    },
-    {
-      "code": 103,
-      "icon": "active",
-      "caption": "Alarmprotokoll wird gelöscht"
-    },
-    {
-      "code": 104,
-      "icon": "inactive",
-      "caption": "Alarmprotokoll ist inaktiv"
-    },
-    {
-      "code": 200,
-      "icon": "inactive",
-      "caption": "Es ist Fehler aufgetreten, weitere Informationen unter Meldungen, im Log oder Debug!"
     }
   ]
 }

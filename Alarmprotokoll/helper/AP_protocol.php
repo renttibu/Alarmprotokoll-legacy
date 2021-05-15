@@ -4,7 +4,7 @@
  * @author      Ulrich Bittner
  * @copyright   (c) 2020, 2021
  * @license    	CC BY-NC-SA 4.0
- * @see         https://github.com/ubittner/Alarmprotokoll/
+ * @see         https://github.com/ubittner/Alarmprotokoll/tree/master/Alarmprotokoll
  */
 
 /** @noinspection PhpUnused */
@@ -27,8 +27,11 @@ trait AP_protocol
         if ($this->CheckMaintenanceMode()) {
             return;
         }
-        $recipients = json_decode($this->ReadPropertyString('Recipients'));
-        if (!empty($recipients)) {
+        if (!$this->ReadPropertyBoolean('UseMonthlyProtocol')) {
+            return;
+        }
+        $mailer = $this->ReadPropertyInteger('MonthlyMailer');
+        if ($mailer != 0 && @IPS_ObjectExists($mailer)) {
             // Check if it is the first day of the month
             $day = date('j');
             if ($day == '1' || !$CheckDay) {
@@ -68,13 +71,10 @@ trait AP_protocol
                             $text .= $message['Value'] . "\n";
                         }
                     }
-                    // Send mail to recipients
-                    foreach ($recipients as $recipient) {
-                        if ($recipient->MonthlyProtocol && $recipient->ID != 0 && !empty($recipient->Address) && $recipient->Use) {
-                            $mailSubject = $this->ReadPropertyString('MonthlyProtocolSubject') . ' ' . $monthName[$month] . ' ' . $year . ', ' . $designation;
-                            @SMTP_SendMailEx($recipient->ID, $recipient->Address, $mailSubject, $text);
-                        }
-                    }
+                    // Send mail
+                    $mailSubject = $this->ReadPropertyString('MonthlyProtocolSubject') . ' ' . $monthName[$month] . ' ' . $year . ', ' . $designation;
+                    $scriptText = 'MA_SendMessage(' . $mailer . ', "' . $mailSubject . '", "' . $text . '");';
+                    IPS_RunScriptText($scriptText);
                 }
             }
         }
@@ -86,9 +86,11 @@ trait AP_protocol
         if ($this->CheckMaintenanceMode()) {
             return;
         }
-        // Get email recipients
-        $recipients = json_decode($this->ReadPropertyString('Recipients'));
-        if (!empty($recipients)) {
+        if (!$this->ReadPropertyBoolean('UseArchiveProtocol')) {
+            return;
+        }
+        $mailer = $this->ReadPropertyInteger('ArchiveMailer');
+        if ($mailer != 0 && @IPS_ObjectExists($mailer)) {
             // Prepare data
             // Set start time to 2000-01-01 12:00 am
             $startTime = 946684800;
@@ -103,13 +105,10 @@ trait AP_protocol
                     $text .= $message['Value'] . "\n";
                 }
             }
-            // Send mail to defined recipients
-            foreach ($recipients as $recipient) {
-                if ($recipient->ArchiveProtocol && $recipient->ID != 0 && !empty($recipient->Address) && $recipient->Use) {
-                    $mailSubject = $this->ReadPropertyString('ArchiveProtocolSubject') . ' ' . $designation;
-                    SMTP_SendMailEx($recipient->ID, $recipient->Address, $mailSubject, $text);
-                }
-            }
+            // Send mail
+            $mailSubject = $this->ReadPropertyString('ArchiveProtocolSubject') . ' ' . $designation;
+            $scriptText = 'MA_SendMessage(' . $mailer . ', "' . $mailSubject . '", "' . $text . '");';
+            IPS_RunScriptText($scriptText);
         }
     }
 

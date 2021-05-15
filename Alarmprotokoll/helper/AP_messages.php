@@ -4,7 +4,7 @@
  * @author      Ulrich Bittner
  * @copyright   (c) 2020, 2021
  * @license    	CC BY-NC-SA 4.0
- * @see         https://github.com/ubittner/Alarmprotokoll/
+ * @see         https://github.com/ubittner/Alarmprotokoll/tree/master/Alarmprotokoll
  */
 
 /** @noinspection DuplicatedCode */
@@ -59,13 +59,8 @@ trait AP_messages
 
     public function DeleteMessages(): void
     {
-        // Alarm messages
         $this->SetValue('AlarmMessages', 'Keine Alarmmeldungen vorhanden!');
-
-        // State messages
         $this->SetValue('StateMessages', 'Keine Zustandsmeldungen vorhanden!');
-
-        // Event messages
         $this->SetValue('EventMessages', 'Keine Ereignismeldungen vorhanden!');
     }
 

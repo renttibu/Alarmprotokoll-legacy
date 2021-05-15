@@ -4,7 +4,7 @@
  * @author      Ulrich Bittner
  * @copyright   (c) 2020, 2021
  * @license    	CC BY-NC-SA 4.0
- * @see         https://github.com/ubittner/Alarmprotokoll/
+ * @see         https://github.com/ubittner/Alarmprotokoll/tree/master/Alarmprotokoll
  */
 
 /** @noinspection PhpUnused */

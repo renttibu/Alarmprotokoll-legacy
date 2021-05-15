@@ -4,7 +4,7 @@
  * @author      Ulrich Bittner
  * @copyright   (c) 2020, 2021
  * @license    	CC BY-NC-SA 4.0
- * @see         https://github.com/ubittner/Alarmprotokoll/
+ * @see         https://github.com/ubittner/Alarmprotokoll/tree/master/Alarmprotokoll
  */
 
 /** @noinspection PhpUnused */
@@ -13,8 +13,6 @@ declare(strict_types=1);
 
 trait AP_backupRestore
 {
-    #################### Backup
-
     public function CreateBackup(int $BackupCategory): void
     {
         if (IPS_GetInstance($this->InstanceID)['InstanceStatus'] == 102) {
@@ -29,8 +27,6 @@ trait AP_backupRestore
             echo 'Die Konfiguration wurde erfolgreich gesichert!';
         }
     }
-
-    #################### Restore
 
     public function RestoreConfiguration(int $ConfigurationScript): void
     {
