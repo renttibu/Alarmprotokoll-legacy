@@ -15,10 +15,10 @@ trait AP_archive
 {
     public function SetArchiveLogging(bool $State): void
     {
-        $archive = $this->ReadPropertyInteger('Archive');
-        if ($archive != 0 && @IPS_ObjectExists($archive)) {
-            @AC_SetLoggingStatus($archive, $this->GetIDForIdent('MessageArchive'), $State);
-            @IPS_ApplyChanges($archive);
+        $id = $this->ReadPropertyInteger('Archive');
+        if ($id != 0 && @IPS_ObjectExists($id)) {
+            @AC_SetLoggingStatus($id, $this->GetIDForIdent('MessageArchive'), $State);
+            @IPS_ApplyChanges($id);
             $text = 'Es ist ein Fehler aufgetreten!';
             switch ($State) {
                 case false:
@@ -36,17 +36,17 @@ trait AP_archive
         }
     }
 
-    public function ShowArchiveState(): void
+    public function ShowArchiveLoggingState(): void
     {
-        $archive = $this->ReadPropertyInteger('Archive');
-        if ($archive != 0 && @IPS_ObjectExists($archive)) {
-            $variables = @AC_GetAggregationVariables($archive, false);
+        $id = $this->ReadPropertyInteger('Archive');
+        if ($id != 0 && @IPS_ObjectExists($id)) {
+            $variables = @AC_GetAggregationVariables($id, false);
             $state = false;
             if (!empty($variables)) {
                 foreach ($variables as $variable) {
                     $variableID = $variable['VariableID'];
                     if ($variableID == $this->GetIDForIdent('MessageArchive')) {
-                        $state = @AC_GetLoggingStatus($archive, $variableID);
+                        $state = @AC_GetLoggingStatus($id, $variableID);
                     }
                 }
             }
@@ -64,44 +64,6 @@ trait AP_archive
             echo $text;
         } else {
             echo 'Es ist kein Archiv ausgewählt!';
-        }
-    }
-
-    public function CleanUpArchiveData(): void
-    {
-        $archive = $this->ReadPropertyInteger('Archive');
-        $instanceStatus = @IPS_GetInstance($this->InstanceID)['InstanceStatus'];
-        if ($archive != 0 && @IPS_ObjectExists($archive) && $instanceStatus == 102) {
-            // Set start time to 2000-01-01 12:00 am
-            $startTime = 946684800;
-            // Calculate end time
-            $retentionTime = $this->ReadPropertyInteger('ArchiveRetentionTime');
-            $endTime = strtotime('-' . $retentionTime . ' days');
-            @AC_DeleteVariableData($archive, $this->GetIDForIdent('MessageArchive'), $startTime, $endTime);
-            // Set timer to next 24 hours
-            $this->SetTimerCleanUpArchiveData();
-        }
-    }
-
-    ################### Private
-
-    private function SetTimerCleanUpArchiveData(): void
-    {
-        $archiveRetentionTime = $this->ReadPropertyInteger('ArchiveRetentionTime');
-        if ($archiveRetentionTime > 0) {
-            // Set timer for deleting archive data
-            $instanceStatus = @IPS_GetInstance($this->InstanceID)['InstanceStatus'];
-            $archive = $this->ReadPropertyInteger('Archive');
-            if ($archive != 0 && @IPS_ObjectExists($archive) && $instanceStatus == 102) {
-                // Set timer to next date
-                $timestamp = mktime(2, 00, 0, (int) date('n'), (int) date('j') + 1, (int) date('Y'));
-                $now = time();
-                $timerInterval = ($timestamp - $now) * 1000;
-                $this->SetTimerInterval('CleanUpArchiveData', $timerInterval);
-            }
-        }
-        if ($archiveRetentionTime <= 0) {
-            $this->SetTimerInterval('CleanUpArchiveData', 0);
         }
     }
 }

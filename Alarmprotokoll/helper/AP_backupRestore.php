@@ -17,8 +17,9 @@ trait AP_backupRestore
     {
         if (IPS_GetInstance($this->InstanceID)['InstanceStatus'] == 102) {
             $name = 'Konfiguration (' . IPS_GetName($this->InstanceID) . ' #' . $this->InstanceID . ') ' . date('d.m.Y H:i:s');
-            $config = IPS_GetConfiguration($this->InstanceID);
-            $content = "<?php\n// Backup " . date('d.m.Y, H:i:s') . "\n// " . $this->InstanceID . "\n$" . "config = '" . $config . "';";
+            $config = json_decode(IPS_GetConfiguration($this->InstanceID), true);
+            $json_string = json_encode($config, JSON_HEX_APOS | JSON_PRETTY_PRINT);
+            $content = "<?php\n// Backup " . date('d.m.Y, H:i:s') . "\n// ID " . $this->InstanceID . "\n$" . "config = '" . $json_string . "';";
             $backupScript = IPS_CreateScript(0);
             IPS_SetParent($backupScript, $BackupCategory);
             IPS_SetName($backupScript, $name);
@@ -34,9 +35,11 @@ trait AP_backupRestore
             $object = IPS_GetObject($ConfigurationScript);
             if ($object['ObjectType'] == 3) {
                 $content = IPS_GetScriptContent($ConfigurationScript);
-                preg_match_all('/\'([^\']+)\'/', $content, $matches);
-                $config = $matches[1][0];
-                IPS_SetConfiguration($this->InstanceID, $config);
+                preg_match_all('/\'([^;]+)\'/', $content, $matches);
+                $config = json_decode($matches[1][0], true);
+                IPS_SetProperty($this->InstanceID, 'MaintenanceMode', $config['MaintenanceMode']);
+                IPS_SetProperty($this->InstanceID, 'Variables', json_encode($config['Variables']));
+                IPS_SetProperty($this->InstanceID, 'TriggerVariables', json_encode($config['TriggerVariables']));
                 if (IPS_HasChanges($this->InstanceID)) {
                     IPS_ApplyChanges($this->InstanceID);
                 }

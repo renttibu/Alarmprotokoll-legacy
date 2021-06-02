@@ -22,6 +22,9 @@ class Alarmprotokoll extends IPSModule
     use AP_protocol;
 
     // Constants
+    private const LIBRARY_GUID = '{C241A156-76A1-0079-DDE2-16F73D96D90A}';
+    private const MODULE_NAME = 'Alarmprotokoll';
+    private const MODULE_PREFIX = 'AP';
     private const ARCHIVE_MODULE_GUID = '{43192F0B-135B-4CE7-A0A7-1475603F3060}';
     private const MAILER_MODULE_GUID = '{E43C3C36-8402-6B6D-2699-D870FBC216EF}';
 
@@ -35,10 +38,6 @@ class Alarmprotokoll extends IPSModule
         $this->RegisterPropertyBoolean('MaintenanceMode', false);
         // Designation
         $this->RegisterPropertyString('Designation', '');
-        // Archive
-        $this->RegisterPropertyInteger('Archive', 0);
-        $this->RegisterPropertyBoolean('UseArchiving', false);
-        $this->RegisterPropertyInteger('ArchiveRetentionTime', 90);
         // Messages
         $this->RegisterPropertyBoolean('EnableAlarmMessages', true);
         $this->RegisterPropertyBoolean('EnableStateMessages', true);
@@ -46,7 +45,11 @@ class Alarmprotokoll extends IPSModule
         $this->RegisterPropertyInteger('AlarmMessagesRetentionTime', 2);
         $this->RegisterPropertyInteger('AmountStateMessages', 8);
         $this->RegisterPropertyInteger('EventMessagesRetentionTime', 7);
-        // E-Mail
+        // Archive
+        $this->RegisterPropertyInteger('Archive', 0);
+        $this->RegisterPropertyBoolean('UseArchiving', false);
+        $this->RegisterPropertyInteger('ArchiveRetentionTime', 90);
+        // Protocols
         $this->RegisterPropertyBoolean('UseMonthlyProtocol', true);
         $this->RegisterPropertyString('MonthlyProtocolSubject', 'Monatsprotokoll');
         $this->RegisterPropertyInteger('MonthlyMailer', 0);
@@ -73,7 +76,6 @@ class Alarmprotokoll extends IPSModule
         if ($id == false) {
             IPS_SetIcon($this->GetIDForIdent('EventMessages'), 'Information');
         }
-
         // Message archive
         $id = @$this->GetIDForIdent('MessageArchive');
         $this->RegisterVariableString('MessageArchive', 'Archivdaten', '~TextBox', 40);
@@ -82,9 +84,8 @@ class Alarmprotokoll extends IPSModule
         }
 
         // Timers
-        $this->RegisterTimer('ResetAlarmMessages', 0, 'AP_ResetAlarmMessages(' . $this->InstanceID . ');');
+        $this->RegisterTimer('CleanUpMessages', 0, 'AP_CleanUpMessages(' . $this->InstanceID . ');');
         $this->RegisterTimer('SendMonthlyProtocol', 0, 'AP_SendMonthlyProtocol(' . $this->InstanceID . ', true, 1);');
-        $this->RegisterTimer('CleanUpArchiveData', 0, 'AP_CleanUpArchiveData(' . $this->InstanceID . ');');
     }
 
     public function ApplyChanges()
@@ -100,33 +101,41 @@ class Alarmprotokoll extends IPSModule
             return;
         }
 
-        $this->SetArchiveLogging($this->ReadPropertyBoolean('UseArchiving'));
         $this->RenameMessages();
-        $this->SetTimerResetAlarmMessages();
+        $this->SetArchiveLogging($this->ReadPropertyBoolean('UseArchiving'));
+        $this->SetCleanUpMessagesTimer();
         $this->SetTimerSendMonthlyProtocol();
-        $this->SetTimerCleanUpArchiveData();
-        $this->ValidateConfiguration();
 
-        // Delete all references in order to read them
+        // Delete all references
         foreach ($this->GetReferenceList() as $referenceID) {
             $this->UnregisterReference($referenceID);
         }
-        $id = $this->ReadPropertyInteger('Archive');
-        if ($id != 0 && @IPS_ObjectExists($id)) {
-            if ($this->ReadPropertyBoolean('UseArchiving')) {
-                $this->RegisterReference($id);
+
+        // Delete all registrations
+        foreach ($this->GetMessageList() as $senderID => $messages) {
+            foreach ($messages as $message) {
+                if ($message == VM_UPDATE) {
+                    $this->UnregisterMessage($senderID, VM_UPDATE);
+                }
             }
         }
-        $id = $this->ReadPropertyInteger('MonthlyMailer');
-        if ($id != 0 && @IPS_ObjectExists($id)) {
-            if ($this->ReadPropertyBoolean('UseMonthlyProtocol')) {
-                $this->RegisterReference($id);
-            }
-        }
-        $id = $this->ReadPropertyInteger('ArchiveMailer');
-        if ($id != 0 && @IPS_ObjectExists($id)) {
-            if ($this->ReadPropertyBoolean('UseArchiveProtocol')) {
-                $this->RegisterReference($id);
+
+        // Validation
+        if ($this->ValidateConfiguration()) {
+            // Register references
+            $this->SendDebug(__FUNCTION__, 'Referenzen und Nachrichten werden registriert.', 0);
+            $propertyNames = [
+                ['name' => 'Archive', 'use' => 'UseArchiving'],
+                ['name' => 'MonthlyMailer', 'use' => 'UseMonthlyProtocol'],
+                ['name' => 'ArchiveMailer', 'use' => 'UseArchiveProtocol']
+            ];
+            foreach ($propertyNames as $propertyName) {
+                $id = $this->ReadPropertyInteger($propertyName['name']);
+                if ($id != 0 && @IPS_ObjectExists($id)) {
+                    if ($this->ReadPropertyBoolean($propertyName['use'])) {
+                        $this->RegisterReference($id);
+                    }
+                }
             }
         }
     }
@@ -150,153 +159,452 @@ class Alarmprotokoll extends IPSModule
 
     public function GetConfigurationForm()
     {
-        $formData = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
-        // Archive
+        $form = [];
+
+        #################### Elements
+
+        ########## Functions
+
+        ##### Functions panel
+
+        $form['elements'][] = [
+            'type'    => 'ExpansionPanel',
+            'caption' => 'Wartungsmodus',
+            'items'   => [
+                [
+                    'type'    => 'CheckBox',
+                    'name'    => 'MaintenanceMode',
+                    'caption' => 'Wartungsmodus'
+                ]
+            ]
+        ];
+
+        ########## Designation
+
+        ##### Designation panel
+
+        $form['elements'][] = [
+            'type'    => 'ExpansionPanel',
+            'caption' => 'Bezeichnung',
+            'items'   => [
+                [
+                    'type'    => 'ValidationTextBox',
+                    'name'    => 'Designation',
+                    'caption' => 'Bezeichnung (z.B. Standortbezeichnung)',
+                    'width'   => '600px'
+                ]
+            ]
+        ];
+
+        ########## Messages
+
+        ##### Messages panel
+
+        $form['elements'][] = [
+            'type'    => 'ExpansionPanel',
+            'caption' => 'Meldungen',
+            'items'   => [
+                [
+                    'type'    => 'CheckBox',
+                    'name'    => 'EnableAlarmMessages',
+                    'caption' => 'Alarmmeldungen'
+                ],
+                [
+                    'type'    => 'NumberSpinner',
+                    'name'    => 'AlarmMessagesRetentionTime',
+                    'caption' => 'Anzeigedauer',
+                    'suffix'  => 'Tage'
+                ],
+                [
+                    'type'    => 'Label',
+                    'caption' => ' '
+                ],
+                [
+                    'type'    => 'CheckBox',
+                    'name'    => 'EnableStateMessages',
+                    'caption' => 'Zustandsmeldungen'
+                ],
+                [
+                    'type'    => 'NumberSpinner',
+                    'name'    => 'AmountStateMessages',
+                    'caption' => 'Anzeige',
+                    'suffix'  => 'Meldungen'
+                ],
+                [
+                    'type'    => 'Label',
+                    'caption' => ' '
+                ],
+                [
+                    'type'    => 'CheckBox',
+                    'name'    => 'EnableEventMessages',
+                    'caption' => 'Ereignismeldungen'
+                ],
+                [
+                    'type'    => 'NumberSpinner',
+                    'name'    => 'EventMessagesRetentionTime',
+                    'caption' => 'Anzeigedauer',
+                    'suffix'  => 'Tage'
+                ],
+            ]
+        ];
+
+        ########## Archive
+
         $id = $this->ReadPropertyInteger('Archive');
         $enabled = false;
         if ($id != 0 && @IPS_ObjectExists($id)) {
             $enabled = true;
         }
-        $formData['elements'][2]['items'][0] = [
-            'type'    => 'CheckBox',
-            'name'    => 'UseArchiving',
-            'caption' => 'Archivierung'
-        ];
-        $formData['elements'][2]['items'][1] = [
-            'type'  => 'RowLayout',
-            'items' => [
-                $formData['elements'][2]['items'][1]['items'][0] = [
-                    'type'       => 'SelectModule',
-                    'name'       => 'Archive',
-                    'caption'    => 'Archiv',
-                    'moduleID'   => self::ARCHIVE_MODULE_GUID
+
+        ##### Archive panel
+
+        $form['elements'][] = [
+            'type'    => 'ExpansionPanel',
+            'caption' => 'Archivierung',
+            'items'   => [
+                [
+                    'type'    => 'CheckBox',
+                    'name'    => 'UseArchiving',
+                    'caption' => 'Archivierung'
                 ],
-                $formData['elements'][2]['items'][1]['items'][1] = [
-                    'type'    => 'Label',
-                    'caption' => ' ',
-                    'visible' => $enabled
+                [
+                    'type'  => 'RowLayout',
+                    'items' => [
+                        [
+                            'type'     => 'SelectModule',
+                            'name'     => 'Archive',
+                            'caption'  => 'Archiv',
+                            'moduleID' => self::ARCHIVE_MODULE_GUID
+                        ],
+                        [
+                            'type'    => 'Label',
+                            'caption' => ' ',
+                            'visible' => $enabled
+                        ],
+                        [
+                            'type'     => 'OpenObjectButton',
+                            'caption'  => 'ID ' . $id . ' konfigurieren',
+                            'visible'  => $enabled,
+                            'objectID' => $id
+                        ]
+                    ]
                 ],
-                $formData['elements'][2]['items'][1]['items'][2] = [
-                    'type'     => 'OpenObjectButton',
-                    'caption'  => 'ID ' . $id . ' konfigurieren',
-                    'visible'  => $enabled,
-                    'objectID' => $id
+                [
+                    'type'    => 'NumberSpinner',
+                    'name'    => 'ArchiveRetentionTime',
+                    'caption' => 'Datenspeicherung',
+                    'minimum' => 7,
+                    'suffix'  => 'Tage'
                 ]
             ]
         ];
-        $formData['elements'][2]['items'][2] = [
-            'type'    => 'NumberSpinner',
-            'name'    => 'ArchiveRetentionTime',
-            'caption' => 'Datenspeicherung',
-            'minimum' => 7,
-            'suffix'  => 'Tage'
-        ];
-        // Protocols
-        $formData['elements'][3]['items'][0] = [
-            'type'     => 'CheckBox',
-            'name'     => 'UseMonthlyProtocol',
-            'caption'  => 'Monatsprotokoll'
-        ];
-        $formData['elements'][3]['items'][1] = [
-            'type'    => 'ValidationTextBox',
-            'name'    => 'MonthlyProtocolSubject',
-            'caption' => 'Betreff'
-        ];
-        $id = $this->ReadPropertyInteger('MonthlyMailer');
-        $visibility = false;
-        if ($id != 0 && @IPS_ObjectExists($id)) {
-            $visibility = true;
+
+        ########## Protocols
+
+        $monthlyMailer = $this->ReadPropertyInteger('MonthlyMailer');
+        $monthlyMailerVisibility = false;
+        if ($monthlyMailer != 0 && @IPS_ObjectExists($monthlyMailer)) {
+            $monthlyMailerVisibility = true;
         }
-        $formData['elements'][3]['items'][2] = [
-            'type'  => 'RowLayout',
-            'items' => [
-                $formData['elements'][3]['items'][2]['items'][0] = [
-                    'type'     => 'SelectModule',
-                    'name'     => 'MonthlyMailer',
-                    'caption'  => 'Mailer (E-Mail)',
-                    'moduleID' => self::MAILER_MODULE_GUID
+
+        $archiveMailer = $this->ReadPropertyInteger('ArchiveMailer');
+        $archiveMailerVisibility = false;
+        if ($archiveMailer != 0 && @IPS_ObjectExists($archiveMailer)) {
+            $archiveMailerVisibility = true;
+        }
+
+        ##### Protocols panel
+
+        $form['elements'][] = [
+            'type'    => 'ExpansionPanel',
+            'caption' => 'Protokolle',
+            'items'   => [
+                [
+                    'type'    => 'CheckBox',
+                    'name'    => 'UseMonthlyProtocol',
+                    'caption' => 'Monatsprotokoll'
                 ],
-                $formData['elements'][3]['items'][2]['items'][1] = [
+                [
+                    'type'    => 'ValidationTextBox',
+                    'name'    => 'MonthlyProtocolSubject',
+                    'caption' => 'Betreff'
+                ],
+                [
+                    'type'  => 'RowLayout',
+                    'items' => [
+                        [
+                            'type'     => 'SelectModule',
+                            'name'     => 'MonthlyMailer',
+                            'caption'  => 'Mailer (E-Mail)',
+                            'moduleID' => self::MAILER_MODULE_GUID
+                        ],
+                        [
+                            'type'    => 'Label',
+                            'caption' => ' ',
+                            'visible' => $monthlyMailerVisibility
+                        ],
+                        [
+                            'type'     => 'OpenObjectButton',
+                            'caption'  => 'ID ' . $monthlyMailer . ' konfigurieren',
+                            'visible'  => $monthlyMailerVisibility,
+                            'objectID' => $monthlyMailer
+                        ]
+                    ]
+                ],
+                [
                     'type'    => 'Label',
-                    'caption' => ' ',
-                    'visible' => $visibility
+                    'caption' => ' '
                 ],
-                $formData['elements'][3]['items'][2]['items'][2] = [
-                    'type'     => 'OpenObjectButton',
-                    'caption'  => 'ID ' . $id . ' konfigurieren',
-                    'visible'  => $visibility,
-                    'objectID' => $id
+                [
+                    'type'    => 'CheckBox',
+                    'name'    => 'UseArchiveProtocol',
+                    'caption' => 'Archivprotokoll'
                 ],
+                [
+                    'type'    => 'ValidationTextBox',
+                    'name'    => 'ArchiveProtocolSubject',
+                    'caption' => 'Betreff'
+                ],
+                [
+                    'type'  => 'RowLayout',
+                    'items' => [
+                        [
+                            'type'     => 'SelectModule',
+                            'name'     => 'ArchiveMailer',
+                            'caption'  => 'Mailer (E-Mail)',
+                            'moduleID' => self::MAILER_MODULE_GUID
+                        ],
+                        [
+                            'type'    => 'Label',
+                            'caption' => ' ',
+                            'visible' => $archiveMailerVisibility
+                        ],
+                        [
+                            'type'     => 'OpenObjectButton',
+                            'caption'  => 'ID ' . $archiveMailer . ' konfigurieren',
+                            'visible'  => $archiveMailerVisibility,
+                            'objectID' => $archiveMailer
+                        ]
+                    ]
+                ]
             ]
         ];
-        $formData['elements'][3]['items'][3] = [
-            'type'    => 'Label',
-            'caption' => ' '
-        ];
-        $formData['elements'][3]['items'][4] = [
-            'type'     => 'CheckBox',
-            'name'     => 'UseArchiveProtocol',
-            'caption'  => 'Archivprotokoll'
-        ];
-        $formData['elements'][3]['items'][5] = [
-            'type'    => 'ValidationTextBox',
-            'name'    => 'ArchiveProtocolSubject',
-            'caption' => 'Betreff'
-        ];
-        $id = $this->ReadPropertyInteger('ArchiveMailer');
-        $visibility = false;
-        if ($id != 0 && @IPS_ObjectExists($id)) {
-            $visibility = true;
-        }
-        $formData['elements'][3]['items'][6] = [
-            'type'  => 'RowLayout',
-            'items' => [
-                $formData['elements'][3]['items'][6]['items'][0] = [
-                    'type'     => 'SelectModule',
-                    'name'     => 'ArchiveMailer',
-                    'caption'  => 'Mailer (E-Mail)',
-                    'moduleID' => self::MAILER_MODULE_GUID
+
+        #################### Actions
+
+        ##### Configuration panel
+
+        $form['actions'][] = [
+            'type'    => 'ExpansionPanel',
+            'caption' => 'Konfiguration',
+            'items'   => [
+                [
+                    'type'    => 'Button',
+                    'caption' => 'Neu einlesen',
+                    'onClick' => self::MODULE_PREFIX . '_ReloadConfiguration($id);'
                 ],
-                $formData['elements'][3]['items'][6]['items'][1] = [
-                    'type'    => 'Label',
-                    'caption' => ' ',
-                    'visible' => $visibility
+                [
+                    'type'  => 'RowLayout',
+                    'items' => [
+                        [
+                            'type'    => 'SelectCategory',
+                            'name'    => 'BackupCategory',
+                            'caption' => 'Kategorie',
+                            'width'   => '600px'
+                        ],
+                        [
+                            'type'    => 'Label',
+                            'caption' => ' '
+                        ],
+                        [
+                            'type'    => 'Button',
+                            'caption' => 'Sichern',
+                            'onClick' => self::MODULE_PREFIX . '_CreateBackup($id, $BackupCategory);'
+                        ]
+                    ]
                 ],
-                $formData['elements'][3]['items'][6]['items'][2] = [
-                    'type'     => 'OpenObjectButton',
-                    'caption'  => 'ID ' . $id . ' konfigurieren',
-                    'visible'  => $visibility,
-                    'objectID' => $id
-                ],
+                [
+                    'type'  => 'RowLayout',
+                    'items' => [
+                        [
+                            'type'    => 'SelectScript',
+                            'name'    => 'ConfigurationScript',
+                            'caption' => 'Konfiguration',
+                            'width'   => '600px'
+                        ],
+                        [
+                            'type'    => 'Label',
+                            'caption' => ' '
+                        ],
+                        [
+                            'type'    => 'PopupButton',
+                            'caption' => 'Wiederherstellen',
+                            'popup'   => [
+                                'caption' => 'Konfiguration wirklich wiederherstellen?',
+                                'items'   => [
+                                    [
+                                        'type'    => 'Button',
+                                        'caption' => 'Wiederherstellen',
+                                        'onClick' => self::MODULE_PREFIX . '_RestoreConfiguration($id, $ConfigurationScript);'
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
             ]
         ];
-        // Status
-        $formData['status'][0] = [
-            'code'    => 101,
-            'icon'    => 'active',
-            'caption' => 'Alarmprotokoll wird erstellt',
+
+        ##### Archiving panel
+
+        $form['actions'][] = [
+            'type'    => 'ExpansionPanel',
+            'caption' => 'Archivierung',
+            'items'   => [
+                [
+                    'type'    => 'Button',
+                    'caption' => 'Status anzeigen',
+                    'onClick' => self::MODULE_PREFIX . '_ShowArchiveLoggingState($id);'
+                ]
+            ]
         ];
-        $formData['status'][1] = [
-            'code'    => 102,
-            'icon'    => 'active',
-            'caption' => 'Alarmprotokoll ist aktiv (ID ' . $this->InstanceID . ')',
+
+        ##### Messages panel
+
+        $form['actions'][] = [
+            'type'    => 'ExpansionPanel',
+            'caption' => 'Meldungen',
+            'items'   => [
+                [
+                    'type'    => 'PopupButton',
+                    'caption' => 'Alle Meldungen löschen',
+                    'popup'   => [
+                        'caption' => 'Wirklich alle Meldungen der Anzeige löschen?',
+                        'items'   => [
+                            [
+                                'type'    => 'Button',
+                                'caption' => 'Löschen',
+                                'onClick' => self::MODULE_PREFIX . '_DeleteAllMessages($id);'
+                            ]
+                        ]
+                    ]
+                ],
+                [
+                    'type'    => 'PopupButton',
+                    'caption' => 'Alarmmeldungen löschen',
+                    'popup'   => [
+                        'caption' => 'Wirklich alle Alarmmeldungen der Anzeige löschen?',
+                        'items'   => [
+                            [
+                                'type'    => 'Button',
+                                'caption' => 'Löschen',
+                                'onClick' => self::MODULE_PREFIX . '_DeleteAlarmMessages($id);'
+                            ]
+                        ]
+                    ]
+                ],
+                [
+                    'type'    => 'PopupButton',
+                    'caption' => 'Zustandsmeldungen löschen',
+                    'popup'   => [
+                        'caption' => 'Wirklich alle Zustandsmeldungen der Anzeige löschen?',
+                        'items'   => [
+                            [
+                                'type'    => 'Button',
+                                'caption' => 'Löschen',
+                                'onClick' => self::MODULE_PREFIX . '_DeleteStateMessages($id);'
+                            ]
+                        ]
+                    ]
+                ],
+                [
+                    'type'    => 'PopupButton',
+                    'caption' => 'Ereignismeldungen löschen',
+                    'popup'   => [
+                        'caption' => 'Wirklich alle Ereignismeldungen der Anzeige löschen?',
+                        'items'   => [
+                            [
+                                'type'    => 'Button',
+                                'caption' => 'Löschen',
+                                'onClick' => self::MODULE_PREFIX . '_DeleteEventMessages($id);'
+                            ]
+                        ]
+                    ]
+                ],
+                [
+                    'type'    => 'PopupButton',
+                    'caption' => 'Daten bereinigen',
+                    'popup'   => [
+                        'caption' => 'Wirklich alle Daten bereinigen?',
+                        'items'   => [
+                            [
+                                'type'    => 'Button',
+                                'caption' => 'Bereinigen',
+                                'onClick' => self::MODULE_PREFIX . '_CleanUpMessages($id);'
+                            ]
+                        ]
+                    ]
+                ]
+            ]
         ];
-        $formData['status'][2] = [
-            'code'    => 103,
-            'icon'    => 'active',
-            'caption' => 'Alarmprotokoll wird gelöscht (ID ' . $this->InstanceID . ')',
+
+        ##### Protocol panel
+
+        $form['actions'][] = [
+            'type'    => 'ExpansionPanel',
+            'caption' => 'Protokolle',
+            'items'   => [
+                [
+                    'type'    => 'Button',
+                    'caption' => 'Vormonat versenden',
+                    'onClick' => self::MODULE_PREFIX . '_SendMonthlyProtocol($id, false, 1);'
+                ],
+                [
+                    'type'    => 'Button',
+                    'caption' => 'Aktueller Monat versenden',
+                    'onClick' => self::MODULE_PREFIX . '_SendMonthlyProtocol($id, false, 0);'
+                ],
+                [
+                    'type'    => 'Button',
+                    'caption' => 'Archivprotokoll versenden',
+                    'onClick' => self::MODULE_PREFIX . '_SendArchiveProtocol($id);'
+                ]
+            ]
         ];
-        $formData['status'][3] = [
-            'code'    => 104,
-            'icon'    => 'inactive',
-            'caption' => 'Alarmprotokoll ist inaktiv (ID ' . $this->InstanceID . ')',
+
+        #################### Status
+
+        $library = IPS_GetLibrary(self::LIBRARY_GUID);
+        $version = '[Version ' . $library['Version'] . '-' . $library['Build'] . ' vom ' . date('d.m.Y', $library['Date']) . ']';
+
+        $form['status'] = [
+            [
+                'code'    => 101,
+                'icon'    => 'active',
+                'caption' => self::MODULE_NAME . ' wird erstellt',
+            ],
+            [
+                'code'    => 102,
+                'icon'    => 'active',
+                'caption' => self::MODULE_NAME . ' ist aktiv (ID ' . $this->InstanceID . ') ' . $version,
+            ],
+            [
+                'code'    => 103,
+                'icon'    => 'active',
+                'caption' => self::MODULE_NAME . ' wird gelöscht (ID ' . $this->InstanceID . ') ' . $version,
+            ],
+            [
+                'code'    => 104,
+                'icon'    => 'inactive',
+                'caption' => self::MODULE_NAME . ' ist inaktiv (ID ' . $this->InstanceID . ') ' . $version,
+            ],
+            [
+                'code'    => 200,
+                'icon'    => 'inactive',
+                'caption' => 'Es ist Fehler aufgetreten, weitere Informationen unter Meldungen, im Log oder Debug! (ID ' . $this->InstanceID . ') ' . $version
+            ]
         ];
-        $formData['status'][4] = [
-            'code'    => 200,
-            'icon'    => 'inactive',
-            'caption' => 'Es ist Fehler aufgetreten, weitere Informationen unter Meldungen, im Log oder Debug! (ID ' . $this->InstanceID . ')',
-        ];
-        return json_encode($formData);
+        return json_encode($form);
     }
 
     public function ReloadConfiguration()
@@ -311,135 +619,18 @@ class Alarmprotokoll extends IPSModule
         $this->ApplyChanges();
     }
 
-    private function RenameMessages(): void
-    {
-        // Rename alarm messages
-        $alarmMessagesRetentionTime = $this->ReadPropertyInteger('AlarmMessagesRetentionTime');
-        switch ($alarmMessagesRetentionTime) {
-            case 0:
-                $name = 'Alarmmeldungen (deaktiviert)';
-                $this->SetValue('AlarmMessages', '');
-                break;
-
-            case 1:
-                $name = 'Alarmmeldungen (' . $alarmMessagesRetentionTime . ' Tag)';
-                break;
-
-            case $alarmMessagesRetentionTime > 1:
-                $name = 'Alarmmeldungen (' . $alarmMessagesRetentionTime . ' Tage)';
-                break;
-
-            default:
-                $name = 'Alarmmeldungen';
-        }
-        $id = $this->GetIDForIdent('AlarmMessages');
-        IPS_SetName($id, $name);
-        IPS_SetHidden($id, !$this->ReadPropertyBoolean('EnableAlarmMessages'));
-
-        // Rename state messages
-        $amountStateMessages = $this->ReadPropertyInteger('AmountStateMessages');
-        switch ($amountStateMessages) {
-            case 0:
-                $name = 'Zustandsmeldungen (deaktiviert)';
-                $this->SetValue('StateMessages', '');
-                break;
-
-            case 1:
-                $name = 'Zustandsmeldung (letzte)';
-                break;
-
-            case $amountStateMessages > 1:
-                $name = 'Zustandsmeldungen (letzten ' . $amountStateMessages . ')';
-                break;
-
-            default:
-                $name = 'Zustandsmeldung(en)';
-        }
-        $id = $this->GetIDForIdent('StateMessages');
-        IPS_SetName($id, $name);
-        IPS_SetHidden($id, !$this->ReadPropertyBoolean('EnableStateMessages'));
-
-        // Rename event messages
-        $eventMessagesRetentionTime = $this->ReadPropertyInteger('EventMessagesRetentionTime');
-        switch ($eventMessagesRetentionTime) {
-            case 0:
-                $name = 'Ereignismeldungen (deaktiviert)';
-                $this->SetValue('EventMessages', '');
-                break;
-
-            case 1:
-                $name = 'Ereignismeldungen (' . $eventMessagesRetentionTime . ' Tag)';
-                break;
-
-            case $eventMessagesRetentionTime > 1:
-                $name = 'Ereignismeldungen (' . $eventMessagesRetentionTime . ' Tage)';
-                break;
-
-            default:
-                $name = 'Ereignismeldungen';
-        }
-        $id = $this->GetIDForIdent('EventMessages');
-        IPS_SetName($id, $name);
-        IPS_SetHidden($id, !$this->ReadPropertyBoolean('EnableEventMessages'));
-
-        // Rename message archive
-        $archiveRetentionTime = $this->ReadPropertyInteger('ArchiveRetentionTime');
-        switch ($archiveRetentionTime) {
-            case 0:
-                $name = 'Archivdaten (deaktiviert)';
-                break;
-
-            case 1:
-                $name = 'Archivdaten (' . $archiveRetentionTime . ' Tag)';
-                break;
-
-            case $archiveRetentionTime > 1:
-                $name = 'Archivdaten (' . $archiveRetentionTime . ' Tage)';
-                break;
-
-            default:
-                $name = 'Archivdaten';
-        }
-        IPS_SetName($this->GetIDForIdent('MessageArchive'), $name);
-    }
-
     private function ValidateConfiguration(): bool
     {
         $result = true;
         $status = 102;
-        // Archive
-        $id = $this->ReadPropertyInteger('Archive');
-        if (@!IPS_ObjectExists($id)) {
-            $status = 200;
-            $text = 'Bitte die Archiv Konfiguration prüfen!';
-            $this->SendDebug(__FUNCTION__, $text, 0);
-            $this->LogMessage('ID ' . $this->InstanceID . ', ' . __FUNCTION__ . ', ' . $text, KL_WARNING);
-        }
-        // E-Mail
-        $id = $this->ReadPropertyInteger('MonthlyMailer');
-        if (@!IPS_ObjectExists($id)) {
-            $status = 200;
-            $text = 'Bitte die E-Mail Konfiguration prüfen!';
-            $this->SendDebug(__FUNCTION__, $text, 0);
-            $this->LogMessage('ID ' . $this->InstanceID . ', ' . __FUNCTION__ . ', ' . $text, KL_WARNING);
-        }
-        $id = $this->ReadPropertyInteger('ArchiveMailer');
-        if (@!IPS_ObjectExists($id)) {
-            $status = 200;
-            $text = 'Bitte die E-Mail Konfiguration prüfen!';
-            $this->SendDebug(__FUNCTION__, $text, 0);
-            $this->LogMessage('ID ' . $this->InstanceID . ', ' . __FUNCTION__ . ', ' . $text, KL_WARNING);
-        }
         // Maintenance mode
         $maintenance = $this->CheckMaintenanceMode();
         if ($maintenance) {
+            $result = false;
             $status = 104;
         }
         IPS_SetDisabled($this->InstanceID, $maintenance);
         $this->SetStatus($status);
-        if ($status != 102) {
-            $result = false;
-        }
         return $result;
     }
 

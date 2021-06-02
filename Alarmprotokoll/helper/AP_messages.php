@@ -16,12 +16,6 @@ trait AP_messages
 {
     public function UpdateMessages(string $Message, int $Type): void
     {
-        /*
-         * $Type
-         * 0    = Event
-         * 1    = State
-         * 2    = Alarm
-         */
         if ($this->CheckMaintenanceMode()) {
             return;
         }
@@ -41,23 +35,23 @@ trait AP_messages
             case 1: # State
                 $amountStateMessages = $this->ReadPropertyInteger('AmountStateMessages');
                 if ($amountStateMessages > 0) {
-                    $this->UpdateStateMessages($Message);
                     $this->UpdateEventMessages($Message);
+                    $this->UpdateStateMessages($Message);
                 }
                 break;
 
             case 2: # Alarm
                 $alarmMessagesRetentionTime = $this->ReadPropertyInteger('AlarmMessagesRetentionTime');
                 if ($alarmMessagesRetentionTime > 0) {
-                    $this->UpdateAlarmMessages($Message);
                     $this->UpdateEventMessages($Message);
+                    $this->UpdateAlarmMessages($Message);
                 }
                 break;
 
         }
     }
 
-    public function DeleteMessages(): void
+    public function DeleteAllMessages(): void
     {
         $this->SetValue('AlarmMessages', 'Keine Alarmmeldungen vorhanden!');
         $this->SetValue('StateMessages', 'Keine Zustandsmeldungen vorhanden!');
@@ -79,53 +73,12 @@ trait AP_messages
         $this->SetValue('AlarmMessages', 'Keine Alarmmeldungen vorhanden!');
     }
 
-    public function ResetAlarmMessages(): void
+    public function CleanUpMessages(): void
     {
-        $retentionTime = $this->ReadPropertyInteger('AlarmMessagesRetentionTime');
-        if ($retentionTime > 0) {
-            // Get messages
-            $content = array_merge(array_filter(explode("\n", $this->GetValue('AlarmMessages'))));
-            // Check retention time
-            foreach ($content as $key => $message) {
-                $year = (int) substr($message, 6, 4);
-                $month = (int) substr($message, 3, 2);
-                $day = (int) substr($message, 0, 2);
-                $timestamp = mktime(0, 0, 0, $month, $day, $year);
-                $dateNow = date('d.m.Y');
-                $yearNow = (int) substr($dateNow, 6, 4);
-                $monthNow = (int) substr($dateNow, 3, 2);
-                $dayNow = (int) substr($dateNow, 0, 2);
-                $timeNow = mktime(0, 0, 0, $monthNow, $dayNow, $yearNow);
-                $difference = ($timestamp - $timeNow) / 86400;
-                $days = abs($difference);
-                $retentionTime = $this->ReadPropertyInteger('AlarmMessagesRetentionTime');
-                if ($days >= $retentionTime) {
-                    unset($content[$key]);
-                }
-            }
-            if (empty($content)) {
-                $this->SetValue('AlarmMessages', 'Keine Alarmmeldungen vorhanden!');
-            }
-        }
-    }
-
-    #################### Private
-
-    private function UpdateEventMessages(string $Message): void
-    {
-        if ($this->CheckMaintenanceMode()) {
-            return;
-        }
-        $retentionTime = $this->ReadPropertyInteger('EventMessagesRetentionTime');
-        if ($retentionTime > 0) {
-            // Get messages
+        // Event messages
+        if ($this->ReadPropertyInteger('EventMessagesRetentionTime') > 0) {
             $content = array_merge(array_filter(explode("\n", $this->GetValue('EventMessages'))));
-            // Check retention time
             foreach ($content as $key => $message) {
-                // Delete empty message hint
-                if (strpos($message, 'Keine Ereignismeldungen vorhanden!') !== false) {
-                    unset($content[$key]);
-                }
                 if (!empty($content)) {
                     $year = (int) substr($message, 6, 4);
                     $month = (int) substr($message, 3, 2);
@@ -138,9 +91,163 @@ trait AP_messages
                     $timeNow = mktime(0, 0, 0, $monthNow, $dayNow, $yearNow);
                     $difference = ($timestamp - $timeNow) / 86400;
                     $days = abs($difference);
-                    if ($days >= $retentionTime) {
+                    if ($days >= $this->ReadPropertyInteger('EventMessagesRetentionTime')) {
                         unset($content[$key]);
                     }
+                }
+            }
+            if (empty($content)) {
+                $this->SetValue('AlarmMessages', 'Keine Ereignismeldungen vorhanden!');
+            }
+        }
+
+        // Alarm messages
+        if ($this->ReadPropertyInteger('AlarmMessagesRetentionTime') > 0) {
+            $content = array_merge(array_filter(explode("\n", $this->GetValue('AlarmMessages'))));
+            foreach ($content as $key => $message) {
+                $year = (int) substr($message, 6, 4);
+                $month = (int) substr($message, 3, 2);
+                $day = (int) substr($message, 0, 2);
+                $timestamp = mktime(0, 0, 0, $month, $day, $year);
+                $dateNow = date('d.m.Y');
+                $yearNow = (int) substr($dateNow, 6, 4);
+                $monthNow = (int) substr($dateNow, 3, 2);
+                $dayNow = (int) substr($dateNow, 0, 2);
+                $timeNow = mktime(0, 0, 0, $monthNow, $dayNow, $yearNow);
+                $difference = ($timestamp - $timeNow) / 86400;
+                $days = abs($difference);
+                if ($days >= $this->ReadPropertyInteger('AlarmMessagesRetentionTime')) {
+                    unset($content[$key]);
+                }
+            }
+            if (empty($content)) {
+                $this->SetValue('AlarmMessages', 'Keine Alarmmeldungen vorhanden!');
+            }
+        }
+
+        // Archive
+        $retentionTime = $this->ReadPropertyInteger('ArchiveRetentionTime');
+        if ($retentionTime > 0) {
+            $archive = $this->ReadPropertyInteger('Archive');
+            $instanceStatus = @IPS_GetInstance($this->InstanceID)['InstanceStatus'];
+            if ($archive != 0 && @IPS_ObjectExists($archive) && $instanceStatus == 102) {
+                // Set start time to 2000-01-01 12:00 am
+                $startTime = 946684800;
+                // Calculate end time
+                $endTime = strtotime('-' . $retentionTime . ' days');
+                @AC_DeleteVariableData($archive, $this->GetIDForIdent('MessageArchive'), $startTime, $endTime);
+            }
+        }
+
+        $this->SetCleanUpMessagesTimer();
+    }
+
+    #################### Private
+
+    private function RenameMessages(): void
+    {
+        // Rename alarm messages
+        $alarmMessagesRetentionTime = $this->ReadPropertyInteger('AlarmMessagesRetentionTime');
+        switch ($alarmMessagesRetentionTime) {
+            case 0:
+                $name = 'Alarmmeldungen (deaktiviert)';
+                $this->SetValue('AlarmMessages', '');
+                break;
+
+            case 1:
+                $name = 'Alarmmeldungen (' . $alarmMessagesRetentionTime . ' Tag)';
+                break;
+
+            case $alarmMessagesRetentionTime > 1:
+                $name = 'Alarmmeldungen (' . $alarmMessagesRetentionTime . ' Tage)';
+                break;
+
+            default:
+                $name = 'Alarmmeldungen';
+        }
+        $id = $this->GetIDForIdent('AlarmMessages');
+        IPS_SetName($id, $name);
+        IPS_SetHidden($id, !$this->ReadPropertyBoolean('EnableAlarmMessages'));
+
+        // Rename state messages
+        $amountStateMessages = $this->ReadPropertyInteger('AmountStateMessages');
+        switch ($amountStateMessages) {
+            case 0:
+                $name = 'Zustandsmeldungen (deaktiviert)';
+                $this->SetValue('StateMessages', '');
+                break;
+
+            case 1:
+                $name = 'Zustandsmeldung (letzte)';
+                break;
+
+            case $amountStateMessages > 1:
+                $name = 'Zustandsmeldungen (letzten ' . $amountStateMessages . ')';
+                break;
+
+            default:
+                $name = 'Zustandsmeldung(en)';
+        }
+        $id = $this->GetIDForIdent('StateMessages');
+        IPS_SetName($id, $name);
+        IPS_SetHidden($id, !$this->ReadPropertyBoolean('EnableStateMessages'));
+
+        // Rename event messages
+        $eventMessagesRetentionTime = $this->ReadPropertyInteger('EventMessagesRetentionTime');
+        switch ($eventMessagesRetentionTime) {
+            case 0:
+                $name = 'Ereignismeldungen (deaktiviert)';
+                $this->SetValue('EventMessages', '');
+                break;
+
+            case 1:
+                $name = 'Ereignismeldungen (' . $eventMessagesRetentionTime . ' Tag)';
+                break;
+
+            case $eventMessagesRetentionTime > 1:
+                $name = 'Ereignismeldungen (' . $eventMessagesRetentionTime . ' Tage)';
+                break;
+
+            default:
+                $name = 'Ereignismeldungen';
+        }
+        $id = $this->GetIDForIdent('EventMessages');
+        IPS_SetName($id, $name);
+        IPS_SetHidden($id, !$this->ReadPropertyBoolean('EnableEventMessages'));
+
+        // Rename message archive
+        $archiveRetentionTime = $this->ReadPropertyInteger('ArchiveRetentionTime');
+        switch ($archiveRetentionTime) {
+            case 0:
+                $name = 'Archivdaten (deaktiviert)';
+                break;
+
+            case 1:
+                $name = 'Archivdaten (' . $archiveRetentionTime . ' Tag)';
+                break;
+
+            case $archiveRetentionTime > 1:
+                $name = 'Archivdaten (' . $archiveRetentionTime . ' Tage)';
+                break;
+
+            default:
+                $name = 'Archivdaten';
+        }
+        IPS_SetName($this->GetIDForIdent('MessageArchive'), $name);
+    }
+
+    private function UpdateEventMessages(string $Message): void
+    {
+        if ($this->CheckMaintenanceMode()) {
+            return;
+        }
+        $this->SendDebug(__FUNCTION__, $Message, 0);
+        if ($this->ReadPropertyInteger('EventMessagesRetentionTime') > 0) {
+            $content = array_merge(array_filter(explode("\n", $this->GetValue('EventMessages'))));
+            foreach ($content as $key => $message) {
+                // Delete empty message hint
+                if (strpos($message, 'Keine Ereignismeldungen vorhanden!') !== false) {
+                    unset($content[$key]);
                 }
             }
             // Add new message at beginning
@@ -161,9 +268,7 @@ trait AP_messages
             if ($amountStateMessages == 1) {
                 $this->SetValue('AlarmMessages', $Message);
             } else {
-                // Get messages
                 $content = array_merge(array_filter(explode("\n", $this->GetValue('StateMessages'))));
-                // Delete empty message hint
                 foreach ($content as $key => $message) {
                     // Delete empty message hint
                     if (strpos($message, 'Keine Zustandsmeldungen vorhanden!') !== false) {
@@ -186,29 +291,11 @@ trait AP_messages
         }
         $retentionTime = $this->ReadPropertyInteger('AlarmMessagesRetentionTime');
         if ($retentionTime > 0) {
-            // Get messages
             $content = array_merge(array_filter(explode("\n", $this->GetValue('AlarmMessages'))));
-            // Check retention time
             foreach ($content as $key => $message) {
                 // Delete empty message hint
                 if (strpos($message, 'Keine Alarmmeldungen vorhanden!') !== false) {
                     unset($content[$key]);
-                }
-                if (!empty($content)) {
-                    $year = (int) substr($message, 6, 4);
-                    $month = (int) substr($message, 3, 2);
-                    $day = (int) substr($message, 0, 2);
-                    $timestamp = mktime(0, 0, 0, $month, $day, $year);
-                    $dateNow = date('d.m.Y');
-                    $yearNow = (int) substr($dateNow, 6, 4);
-                    $monthNow = (int) substr($dateNow, 3, 2);
-                    $dayNow = (int) substr($dateNow, 0, 2);
-                    $timeNow = mktime(0, 0, 0, $monthNow, $dayNow, $yearNow);
-                    $difference = ($timestamp - $timeNow) / 86400;
-                    $days = abs($difference);
-                    if ($days >= $retentionTime) {
-                        unset($content[$key]);
-                    }
                 }
             }
             // Add new message at beginning
@@ -216,17 +303,13 @@ trait AP_messages
             $newContent = implode("\n", $content);
             $this->SetValue('AlarmMessages', $newContent);
         }
-        if (empty($newContent)) {
-            $this->SetValue('AlarmMessages', 'Keine Alarmmeldungen vorhanden!');
-        }
     }
 
-    private function SetTimerResetAlarmMessages(): void
+    private function SetCleanUpMessagesTimer(): void
     {
         // Set timer to next day
         $timestamp = mktime(0, 05, 0, (int) date('n'), (int) date('j') + 1, (int) date('Y'));
-        $now = time();
-        $timerInterval = ($timestamp - $now) * 1000;
-        $this->SetTimerInterval('ResetAlarmMessages', $timerInterval);
+        $timerInterval = ($timestamp - time()) * 1000;
+        $this->SetTimerInterval('CleanUpMessages', $timerInterval);
     }
 }
