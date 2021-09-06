@@ -99,7 +99,7 @@ trait AP_messages
             if (empty($content)) {
                 $this->SetValue('EventMessages', 'Keine Ereignismeldungen vorhanden!');
             } else {
-                $this->SetValue('EventMessages', $content);
+                $this->SetValue('EventMessages', implode("\n", $content));
             }
         }
 
@@ -125,7 +125,7 @@ trait AP_messages
             if (empty($content)) {
                 $this->SetValue('AlarmMessages', 'Keine Alarmmeldungen vorhanden!');
             } else {
-                $this->SetValue('AlarmMessages', $content);
+                $this->SetValue('AlarmMessages', implode("\n", $content));
             }
         }
 
